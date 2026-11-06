@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
     return {
+      // Relative asset paths so the build works under a GitHub Pages subpath (/<repo>/).
+      base: './',
       define: {
         // This is just generic value for the GEMINI API key.
         // This is not used at all, and can be ignored!
