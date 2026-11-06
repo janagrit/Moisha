@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moisha - Wise Pocket Airbnb Pricing Advisor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+              serif: ['"Playfair Display"', 'serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            },
+            colors: {
+              moisha: {
+                sand: '#FAF8F5',
+                ivory: '#FFFFFF',
+                stone: '#F4EFE6',
+                border: '#E8DFD3',
+                navy: '#0F264A',
+                blue: '#1E40AF',
+                royal: '#2563EB',
+                gold: '#D97706',
+                amber: '#B45309',
+                lightgold: '#FEF3C7',
+                olive: '#047857'
+              }
+            }
+          }
+        }
+      }
+    </script>
+      </head>
+  <body class="bg-[#FAF8F5] text-slate-800 min-h-screen antialiased selection:bg-amber-200 selection:text-amber-900">
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  <script type="module" src="/index.js"></script></body>
+</html>
