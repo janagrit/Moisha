@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import 'dotenv/config';
+import crypto from 'node:crypto';
 import express from 'express';
 import { GoogleAuth } from 'google-auth-library';
 import fetch from 'node-fetch';
@@ -12,9 +13,47 @@ import rateLimit from 'express-rate-limit';
 import { WebSocketServer, WebSocket } from 'ws';
 
 const app = express();
+
+// --- Optional shared-password gate (HTTP Basic Auth) ---
+// Set APP_PASSWORD (and optionally APP_USERNAME, default "moisha") to require a
+// login for the whole site: pages, AI proxy and WebSocket upgrades.
+const APP_USERNAME = process?.env?.APP_USERNAME || 'moisha';
+const APP_PASSWORD = process?.env?.APP_PASSWORD;
+
+function safeEqual(a, b) {
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+}
+
+function isAuthorized(authorizationHeader) {
+  if (!APP_PASSWORD) return true;
+  const [scheme, encoded] = (authorizationHeader || '').split(' ');
+  if (scheme !== 'Basic' || !encoded) return false;
+  const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+  const sep = decoded.indexOf(':');
+  if (sep < 0) return false;
+  const userOk = safeEqual(decoded.slice(0, sep), APP_USERNAME);
+  const passOk = safeEqual(decoded.slice(sep + 1), APP_PASSWORD);
+  return userOk && passOk;
+}
+
+app.use((req, res, next) => {
+  if (isAuthorized(req.headers.authorization)) return next();
+  res.set('WWW-Authenticate', 'Basic realm="Moisha", charset="UTF-8"');
+  res.status(401).send('Login required.');
+});
+
+// --- Serve the built frontend (used in the Cloud Run container) ---
+const STATIC_DIR = process?.env?.STATIC_DIR;
+if (STATIC_DIR) {
+  app.use(express.static(STATIC_DIR));
+}
+
 app.use(express.json({limit: process?.env?.API_PAYLOAD_MAX_SIZE || "7mb"}));
 
-const PORT = process?.env?.API_BACKEND_PORT || 5000;
+// Cloud Run injects PORT; locally API_BACKEND_PORT from .env.local is used.
+const PORT = process?.env?.PORT || process?.env?.API_BACKEND_PORT || 5000;
 const API_BACKEND_HOST = process?.env?.API_BACKEND_HOST || "127.0.0.1";
 
 const GOOGLE_CLOUD_LOCATION = process?.env?.GOOGLE_CLOUD_LOCATION;
@@ -510,6 +549,11 @@ const server = app.listen(PORT, API_BACKEND_HOST, () => {
 const wss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', async (request, socket, head) => {
+  if (!isAuthorized(request.headers.authorization)) {
+    socket.write('HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm="Moisha"\r\n\r\n');
+    socket.destroy();
+    return;
+  }
   const url = new URL(request.url, `http://${request.headers.host}`);
 
   if (url.pathname === '/ws-proxy') {
