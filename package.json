@@ -1,12 +1,15 @@
 {
-  "name": "moisha-wise-pocket-airbnb-advisor-jewish-real-estate-savvy",
-  "workspaces": ["frontend", "backend"], 
+  "name": "moisha",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
-    "dev-frontend": "npm run dev --prefix frontend",
-    "dev-backend": "npm run dev --prefix backend",
-    "dev": "concurrently \"npm run dev-frontend\" \"npm run dev-backend\""
-  },
-  "devDependencies": {
-    "concurrently": "latest"
+    "dev": "npm run dev --workspace frontend",
+    "build": "npm run build --workspace frontend",
+    "preview": "npm run preview --workspace frontend",
+    "test": "npm test --workspace frontend",
+    "typecheck": "npm run typecheck --workspace frontend",
+    "build-baseline": "npm run build-baseline --workspace frontend --"
   }
 }
