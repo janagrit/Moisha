@@ -6,6 +6,36 @@ The backend acts as a proxy, handling Google Cloud API calls.
 This project is intended for demonstration and prototyping purposes only.
 It is not intended for use in a production environment.
 
+Moisha — Key Hosting Capabilities
+Guest Communication
+
+Draft guest replies, handle complaints, manage inquiries, and respond professionally to difficult situations.
+
+
+Problem & Dispute Resolution
+
+Get guidance on cancellations, refunds, damages, bad reviews, rule violations, and Airbnb support disputes.
+
+
+Reservation Management
+
+Handle booking changes, check-in/check-out questions, guest requirements, and reservation issues.
+
+
+Listing & Revenue Optimization
+
+Improve listing descriptions, pricing strategies, occupancy, photos, and search visibility.
+
+
+Property Operations
+
+Manage house rules, cleaning, maintenance, damages, inspections, and tenant-related issues.
+
+
+Policies & Host Protection
+
+Understand Airbnb policies, document incidents, prepare evidence, and identify appropriate next steps.
+
 ## Prerequisites
 
 To run this application locally, you need:
