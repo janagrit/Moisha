@@ -1,4 +1,4 @@
-# Moisha — Your Airbnb Pocket Advisor
+# Moisha - Your Airbnb Pocket Advisor
 
 Moisha helps short-term rental hosts decide how much to charge for their properties.
 
