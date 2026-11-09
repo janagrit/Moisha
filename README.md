@@ -6,36 +6,28 @@ The backend acts as a proxy, handling Google Cloud API calls.
 This project is intended for demonstration and prototyping purposes only.
 It is not intended for use in a production environment.
 
-Moisha — Key Hosting Capabilities
-Guest Communication
 
-Draft guest replies, handle complaints, manage inquiries, and respond professionally to difficult situations.
+# Moisha — Your Airbnb Pocket Advisor
 
+Moisha is an AI-powered assistant for Airbnb and short-term rental hosts. It helps with everyday hosting tasks, difficult guest situations, booking issues, and property management.
 
-Problem & Dispute Resolution
+Whether you manage a single room or several rental properties, Moisha gives you practical advice, helps prepare guest messages, and makes complicated hosting situations easier to handle.
 
-Get guidance on cancellations, refunds, damages, bad reviews, rule violations, and Airbnb support disputes.
+## How It Works
 
+| Step | What You Do | What Moisha Does |
+|---|---|---|
+| 1. Select Property | Choose the rental property you want to analyze. | Loads its location, property details, current nightly rate, and pricing limits. |
+| 2. Review Pricing | Check your current rates and available dates. | Identifies vacant nights and potential revenue at risk. |
+| 3. Analyze Local Market | Select or review your property's market area. | Researches local rental prices, weekday and weekend rates, and market conditions. |
+| 4. Compare Competitors | Review similar nearby properties. | Compares available competitor rates and identifies pricing gaps. |
+| 5. Get Recommendations | Review Moisha's analysis. | Suggests nightly rates, pricing adjustments, and promotional strategies. |
+| 6. Make a Decision | Choose whether to adjust your prices. | Calculates the potential revenue impact and respects your minimum price limit. |
 
-Reservation Management
-
-Handle booking changes, check-in/check-out questions, guest requirements, and reservation issues.
-
-
-Listing & Revenue Optimization
-
-Improve listing descriptions, pricing strategies, occupancy, photos, and search visibility.
-
-
-Property Operations
-
-Manage house rules, cleaning, maintenance, damages, inspections, and tenant-related issues.
+**The result:** A clearer picture of your local market, a better understanding of your property's earning potential, and pricing decisions backed by available data.
 
 
-Policies & Host Protection
-
-Understand Airbnb policies, document incidents, prepare evidence, and identify appropriate next steps.
-
+*Note: Moisha provides AI-generated information and suggestions. Hosts remain responsible for verifying applicable Airbnb policies, local regulations, and decisions involving their properties.*
 ## Prerequisites
 
 To run this application locally, you need:
