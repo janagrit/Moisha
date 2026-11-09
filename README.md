@@ -1,56 +1,54 @@
-# Moisha - Your Airbnb Pocket Advisor
+# Moisha | Airbnb Pocket Advisor
 
 <p align="center">
-  <img
-    src="screenshots/moisha-dashboard.png"
-    alt="Moisha Dashboard"
-    width="30%"
-  />
+  <img src="screenshots/moisha-dashboard.png" alt="Moisha neighborhood pricing advisor" width="100%" />
 </p>
 
-Moisha helps short-term rental hosts decide how much to charge for their properties.
+Moisha helps short-term rental hosts decide what to charge for their properties.
 
-It compares nightly rates, looks at rental prices in the surrounding area, identifies empty dates, and calculates how pricing changes could affect revenue.
+It compares nearby rental prices, tracks market changes, calculates potential revenue, and suggests when to adjust nightly rates.
 
-The idea came from a simple problem: setting a nightly rate shouldn't be guesswork. A property might be priced too high for its neighborhood, or too low when demand is strong. Moisha helps hosts see the difference and decide what to do.
+## What It Does
 
-## Features
+| Feature | Description |
+|---|---|
+| Market Research | Check rental prices in your neighborhood. |
+| Competitor Analysis | Compare your rates with similar properties nearby. |
+| Pricing Advice | Get recommendations for nightly rates. |
+| Revenue Calculator | Calculate income, expenses, and potential profit. |
+| Vacancy Analysis | Identify empty dates and potential lost revenue. |
+| Price Alerts | Get notified when market conditions may require attention. |
 
-### Local Market Research
-- Look up rental prices in the property's ZIP code and neighborhood.
-- Compare weekday and weekend rates.
-- Review available market information and pricing trends.
-- Identify how similar properties are priced.
+## How It Works
 
-### Competitor Analysis
-- Compare nightly rates with nearby properties.
-- Identify competitors charging less.
-- Calculate price differences.
-- Review available competitor information before adjusting rates.
+1. Select your rental property.
+2. Review your current nightly rate and available dates.
+3. Check prices of comparable properties nearby.
+4. Review Moisha's pricing recommendation.
+5. Calculate the financial impact before changing your rate.
 
-### Pricing Recommendations
-- Get suggested nightly rates based on available market and property data.
-- Identify when a price adjustment may help attract bookings.
-- Set a minimum nightly rate.
-- Compare the current rate with the suggested rate.
+## Technology
 
-### Revenue Calculations
-- Calculate potential income from available nights.
-- Estimate revenue lost to vacant dates.
-- Compare different nightly rate scenarios.
-- Understand the financial impact of discounts.
+React · TypeScript · Vite · Node.js · Express · Google Gemini
 
-### Vacancy Management
-- Identify gaps in the booking calendar.
-- Review upcoming unbooked dates.
-- Consider last-minute discounts.
-- Evaluate discounts for longer stays.
+## Run Locally
 
-### Pricing Rules
-- Set minimum acceptable nightly rates.
-- Configure competitor price alerts.
-- Define pricing thresholds.
-- Review recommendations before changing rates.
+**Requirements:** Node.js, npm, and Google Cloud credentials with Vertex AI access.
+
+```bash
+gcloud init
+gcloud auth application-default login
+npm install
+npm run dev
+```
+
+Configure the required environment variables in `backend/.env.local`.
+
+## Note
+
+Market information and pricing recommendations depend on available data. Estimates are not guaranteed booking or revenue forecasts.
+
+
 
 ## How It Works
 
