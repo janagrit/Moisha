@@ -1,5 +1,9 @@
 # Moisha - Your Airbnb Pocket Advisor
 
+<p align="center">
+  <img src="screenshots/moisha-dashboard.png" width="100%" alt="Moisha Dashboard">
+</p>
+
 Moisha helps short-term rental hosts decide how much to charge for their properties.
 
 It compares nightly rates, looks at rental prices in the surrounding area, identifies empty dates, and calculates how pricing changes could affect revenue.
