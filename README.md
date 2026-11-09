@@ -1,75 +1,153 @@
-# Vertex AI Studio Frontend App with Node.js Backend
-
-This repository contains a frontend and a Node.js backend, designed to run together.
-The backend acts as a proxy, handling Google Cloud API calls.
-
-This project is intended for demonstration and prototyping purposes only.
-It is not intended for use in a production environment.
-
-
 # Moisha — Your Airbnb Pocket Advisor
 
-Moisha is an AI-powered assistant for Airbnb and short-term rental hosts. It helps with everyday hosting tasks, difficult guest situations, booking issues, and property management.
+Moisha helps short-term rental hosts decide how much to charge for their properties.
 
-Whether you manage a single room or several rental properties, Moisha gives you practical advice, helps prepare guest messages, and makes complicated hosting situations easier to handle.
+It compares nightly rates, looks at rental prices in the surrounding area, identifies empty dates, and calculates how pricing changes could affect revenue.
+
+The idea came from a simple problem: setting a nightly rate shouldn't be guesswork. A property might be priced too high for its neighborhood, or too low when demand is strong. Moisha helps hosts see the difference and decide what to do.
+
+## Features
+
+### Local Market Research
+- Look up rental prices in the property's ZIP code and neighborhood.
+- Compare weekday and weekend rates.
+- Review available market information and pricing trends.
+- Identify how similar properties are priced.
+
+### Competitor Analysis
+- Compare nightly rates with nearby properties.
+- Identify competitors charging less.
+- Calculate price differences.
+- Review available competitor information before adjusting rates.
+
+### Pricing Recommendations
+- Get suggested nightly rates based on available market and property data.
+- Identify when a price adjustment may help attract bookings.
+- Set a minimum nightly rate.
+- Compare the current rate with the suggested rate.
+
+### Revenue Calculations
+- Calculate potential income from available nights.
+- Estimate revenue lost to vacant dates.
+- Compare different nightly rate scenarios.
+- Understand the financial impact of discounts.
+
+### Vacancy Management
+- Identify gaps in the booking calendar.
+- Review upcoming unbooked dates.
+- Consider last-minute discounts.
+- Evaluate discounts for longer stays.
+
+### Pricing Rules
+- Set minimum acceptable nightly rates.
+- Configure competitor price alerts.
+- Define pricing thresholds.
+- Review recommendations before changing rates.
 
 ## How It Works
 
-| Step | What You Do | What Moisha Does |
+| Step | Host | Moisha |
 |---|---|---|
-| 1. Select Property | Choose the rental property you want to analyze. | Loads its location, property details, current nightly rate, and pricing limits. |
-| 2. Review Pricing | Check your current rates and available dates. | Identifies vacant nights and potential revenue at risk. |
-| 3. Analyze Local Market | Select or review your property's market area. | Researches local rental prices, weekday and weekend rates, and market conditions. |
-| 4. Compare Competitors | Review similar nearby properties. | Compares available competitor rates and identifies pricing gaps. |
-| 5. Get Recommendations | Review Moisha's analysis. | Suggests nightly rates, pricing adjustments, and promotional strategies. |
-| 6. Make a Decision | Choose whether to adjust your prices. | Calculates the potential revenue impact and respects your minimum price limit. |
+| 1. Select Property | Select a rental property. | Loads its address, property details, current rate, and minimum price. |
+| 2. Review Calendar | Check upcoming available dates. | Identifies empty nights and calculates potential revenue at risk. |
+| 3. Check Local Market | Review the property's location. | Searches for rental prices and market information in the surrounding area. |
+| 4. Compare Prices | Review similar nearby properties. | Compares available rates and highlights pricing differences. |
+| 5. Review Suggestions | Check the pricing analysis. | Recommends rate adjustments and possible promotions. |
+| 6. Adjust Pricing | Decide whether to change the nightly rate. | Calculates the difference and checks the minimum price limit. |
 
-**The result:** A clearer picture of your local market, a better understanding of your property's earning potential, and pricing decisions backed by available data.
+## Technology
 
-
-*Note: Moisha provides AI-generated information and suggestions. Hosts remain responsible for verifying applicable Airbnb policies, local regulations, and decisions involving their properties.*
-## Prerequisites
-
-To run this application locally, you need:
-
-*   **[Google Cloud SDK / gcloud CLI](https://cloud.google.com/sdk/docs/install)**: Follow the instructions to install the SDK.
-
-*   **gcloud Initialization**:
-    *   Initialize the gcloud CLI:
-        ```bash
-        gcloud init
-        ```
-    *   Authenticate for Application Default Credentials (needed to call Google Cloud APIs):
-        ```bash
-        gcloud auth application-default login
-        ```
-
-*   **Node.js and npm**: Ensure you have Node.js and its package manager, `npm`, installed on your machine.
+- React
+- TypeScript
+- Vite
+- Node.js
+- Express
+- Google Gemini 2.5 Flash
+- Google Cloud Vertex AI
+- Google Search Grounding
 
 ## Project Structure
 
-The project is organized into two main directories:
+```text
+Moisha/
+├── backend/
+│   ├── server.js
+│   └── package.json
+├── frontend/
+│   ├── components/
+│   ├── services/
+│   ├── App.tsx
+│   ├── constants.ts
+│   ├── types.ts
+│   └── package.json
+├── Dockerfile
+├── package.json
+└── README.md
+```
 
-*   `frontend/`: Contains the Frontend application code.
-*   `backend/`: Contains the Node.js/Express server code to proxy Google Cloud API calls.
+## Requirements
 
-## Backend Environment Variables
+Before running the project, install:
 
-The `backend/.env.local` file is automatically generated when you download this application.
-It contains essential Google Cloud environment variables pre-configured based on your project settings at the time of download.
+- Node.js and npm
+- Google Cloud SDK
+- A Google Cloud project with Vertex AI enabled
 
-The variables set in `backend/.env.local` are:
-*   `API_BACKEND_PORT`: The port the backend API server listens on (e.g., `5000`).
-*   `API_PAYLOAD_MAX_SIZE`: The maximum size of the request payload accepted by the backend server (e.g., `5mb`).
-*   `GOOGLE_CLOUD_LOCATION`: The Google Cloud region associated with your project.
-*   `GOOGLE_CLOUD_PROJECT`: Your Google Cloud Project ID.
+[Google Cloud SDK Installation](https://cloud.google.com/sdk/docs/install)
 
-**Note:** These variables are automatically populated during the download process.
-You can modify the values in `backend/.env.local` if you need to change them.
+## Google Cloud Setup
 
-## Installation and Running the App
-
-To install dependencies and run your Google Cloud Vertex AI Studio App locally, execute the following command:
+Initialize the CLI:
 
 ```bash
-npm install && npm run dev
+gcloud init
+```
+
+Authenticate:
+
+```bash
+gcloud auth application-default login
+```
+
+Make sure your account has permission to access Vertex AI.
+
+## Environment Variables
+
+Configure the backend using `backend/.env.local`.
+
+| Variable | Description |
+|---|---|
+| `API_BACKEND_PORT` | Port used by the backend server |
+| `API_PAYLOAD_MAX_SIZE` | Maximum API request size |
+| `GOOGLE_CLOUD_LOCATION` | Google Cloud region |
+| `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID |
+
+Keep credentials and secret keys out of the repository.
+
+## Run Locally
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the application:
+
+```bash
+npm run dev
+```
+
+## Market Data
+
+Moisha uses Google Search Grounding to retrieve publicly available rental market information. Competitor comparisons also use property records maintained by the application.
+
+Market estimates may differ from actual Airbnb booking prices and availability. Recommendations should be reviewed before changing listing prices.
+
+## Why Moisha?
+
+I built Moisha to make rental pricing easier to understand.
+
+When a property sits empty, the question is whether the price is too high, demand is low, or nearby properties offer something more competitive.
+
+Moisha brings those numbers together so hosts can make pricing decisions based on what is happening around their property, rather than relying on guesswork.
