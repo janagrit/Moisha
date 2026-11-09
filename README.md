@@ -1,7 +1,11 @@
 # Moisha - Your Airbnb Pocket Advisor
 
 <p align="center">
-  <img src="screenshots/moisha-dashboard.png" width="100%" alt="Moisha Dashboard">
+  <img
+    src="screenshots/moisha-dashboard.png"
+    alt="Moisha Dashboard"
+    width="50%"
+  />
 </p>
 
 Moisha helps short-term rental hosts decide how much to charge for their properties.
