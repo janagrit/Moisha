@@ -4,7 +4,7 @@
   <img
     src="screenshots/moisha-dashboard.png"
     alt="Moisha Dashboard"
-    width="50%"
+    width="30%"
   />
 </p>
 
