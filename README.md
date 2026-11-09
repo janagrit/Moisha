@@ -12,12 +12,12 @@ It compares nearby rental prices, tracks market changes, calculates potential re
 
 | Feature | Description |
 |---|---|
-| Market Research | Check rental prices in your neighborhood. |
+| Market Research | Record rental prices in your neighborhood and see when each was last updated. |
 | Competitor Analysis | Compare your rates with similar properties nearby. |
 | Pricing Advice | Get recommendations for nightly rates. |
-| Revenue Calculator | Calculate income, expenses, and potential profit. |
+| Revenue Calculator | Income, expense and profit calculations are built. The chat screen for them is planned. |
 | Vacancy Analysis | Identify empty dates and potential lost revenue. |
-| Price Alerts | Get notified when market conditions may require attention. |
+| Price Alerts | Planned. |
 
 ## How It Works
 
@@ -27,128 +27,83 @@ It compares nearby rental prices, tracks market changes, calculates potential re
 4. Review Moisha's pricing recommendation.
 5. Calculate the financial impact before changing your rate.
 
+Moisha is a conversation. You talk to him, he remembers what you tell him, and he shows the numbers in small cards in the chat.
+
 ## Technology
 
-React · TypeScript · Vite · Node.js · Express · Google Gemini
+React · TypeScript · Vite · Tailwind CSS · browser storage
+
+There is no backend, AI service, paid API or database. All calculations run on the device.
 
 ## Run Locally
 
-**Requirements:** Node.js, npm, and Google Cloud credentials with Vertex AI access.
+**Requirements:** Node.js 20.19 or newer, and npm.
 
 ```bash
-gcloud init
-gcloud auth application-default login
 npm install
 npm run dev
 ```
 
-Configure the required environment variables in `backend/.env.local`.
+No environment variables or credentials are needed.
 
-## Note
+Other commands:
 
-Market information and pricing recommendations depend on available data. Estimates are not guaranteed booking or revenue forecasts.
-
-
-
-## How It Works
-
-| Step | Host | Moisha |
-|---|---|---|
-| 1. Select Property | Select a rental property. | Loads its address, property details, current rate, and minimum price. |
-| 2. Review Calendar | Check upcoming available dates. | Identifies empty nights and calculates potential revenue at risk. |
-| 3. Check Local Market | Review the property's location. | Searches for rental prices and market information in the surrounding area. |
-| 4. Compare Prices | Review similar nearby properties. | Compares available rates and highlights pricing differences. |
-| 5. Review Suggestions | Check the pricing analysis. | Recommends rate adjustments and possible promotions. |
-| 6. Adjust Pricing | Decide whether to change the nightly rate. | Calculates the difference and checks the minimum price limit. |
-
-## Technology
-
-- React
-- TypeScript
-- Vite
-- Node.js
-- Express
-- Google Gemini 2.5 Flash
-- Google Cloud Vertex AI
-- Google Search Grounding
+```bash
+npm test
+npm run typecheck
+npm run build
+```
 
 ## Project Structure
 
 ```text
 Moisha/
-├── backend/
-│   ├── server.js
-│   └── package.json
 ├── frontend/
-│   ├── components/
-│   ├── services/
+│   ├── domain/          Pricing, market, vacancy and revenue calculations
+│   ├── memory/          Saved data, export/import, encrypted backups
+│   ├── conversation/    Moisha's conversation logic and messages
+│   ├── components/      Chat screen and cards
+│   ├── services/        Offline support and file sharing
+│   ├── public/          App icons, manifest and hosting headers
+│   ├── sw.ts            Offline cache
 │   ├── App.tsx
-│   ├── constants.ts
-│   ├── types.ts
 │   └── package.json
-├── Dockerfile
+├── docs/
 ├── package.json
 └── README.md
 ```
 
-## Requirements
+## Your Data
 
-Before running the project, install:
+Everything you enter stays in the browser on that device, encrypted with a passcode you choose. Nothing is sent to a server.
 
-- Node.js and npm
-- Google Cloud SDK
-- A Google Cloud project with Vertex AI enabled
+- The app locks after 5 minutes without activity, and whenever it is closed or reloaded.
+- **Nobody can reset a lost passcode.** The only way forward is to erase the device and restore an encrypted backup. Without a backup, the data is gone.
+- Each device keeps its own copy. There is no automatic sync.
+- "Erase this device" removes Moisha's stored data, cached app files and offline worker from that browser. It cannot reach backup files saved elsewhere or any other device.
+- Backups are encrypted with a passphrase you choose. If the passphrase is lost, the backup cannot be opened.
+- Restoring a backup always shows what will be replaced and asks first.
+- Clearing browser data or removing the installed app can erase your information, so back up regularly.
+- Do not enter guest names or other guest details, and never enter your Airbnb password.
 
-[Google Cloud SDK Installation](https://cloud.google.com/sdk/docs/install)
+## Install and Offline Use
 
-## Google Cloud Setup
+After one successful online visit, Moisha opens and works without an internet connection, including saved data and calculations.
 
-Initialize the CLI:
+- **Android and desktop Chrome or Edge:** use the browser's Install option.
+- **iPhone and iPad:** in Safari, tap Share, then Add to Home Screen. The installed app keeps its data separately from Safari, so enter your information inside the installed app or restore a backup there.
 
-```bash
-gcloud init
-```
-
-Authenticate:
-
-```bash
-gcloud auth application-default login
-```
-
-Make sure your account has permission to access Vertex AI.
-
-## Environment Variables
-
-Configure the backend using `backend/.env.local`.
-
-| Variable | Description |
-|---|---|
-| `API_BACKEND_PORT` | Port used by the backend server |
-| `API_PAYLOAD_MAX_SIZE` | Maximum API request size |
-| `GOOGLE_CLOUD_LOCATION` | Google Cloud region |
-| `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID |
-
-Keep credentials and secret keys out of the repository.
-
-## Run Locally
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Start the application:
-
-```bash
-npm run dev
-```
+New versions wait for you to tap Refresh. Moisha only checks anything while the app is open, and there is no background monitoring.
 
 ## Market Data
 
-Moisha uses Google Search Grounding to retrieve publicly available rental market information. Competitor comparisons also use property records maintained by the application.
+You enter nearby prices yourself, and each one shows when it was entered. Moisha has no live market feed, online or offline, and he never changes your listing.
 
 Market estimates may differ from actual Airbnb booking prices and availability. Recommendations should be reviewed before changing listing prices.
+
+## Note
+
+Market information and pricing recommendations depend on available data. Estimates are not guaranteed booking or revenue forecasts.
 
 ## Why Moisha?
 

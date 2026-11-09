@@ -10,6 +10,7 @@
     "preview": "npm run preview --workspace frontend",
     "test": "npm test --workspace frontend",
     "typecheck": "npm run typecheck --workspace frontend",
-    "build-baseline": "npm run build-baseline --workspace frontend --"
+    "build-baseline": "npm run build-baseline --workspace frontend --",
+    "build:demo": "npm run build:demo --workspace frontend"
   }
 }
