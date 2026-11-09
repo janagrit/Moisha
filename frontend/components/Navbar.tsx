@@ -20,9 +20,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         
         {/* Brand */}
         <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 flex items-center justify-center shadow-md shadow-blue-900/15 ring-2 ring-amber-300">
-            <span className="text-xl select-none" role="img" aria-label="Moisha">🕎</span>
-          </div>
+          <img
+            src="moisha-logo.png"
+            alt="Moisha"
+            width={56}
+            height={56}
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full shrink-0 select-none"
+          />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-serif font-extrabold text-2xl tracking-tight text-blue-950">
