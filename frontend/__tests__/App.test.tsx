@@ -15,7 +15,19 @@ describe('Moisha App interactive prototype', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders House 1 undercut alert and applies recommended price drop cleanly', () => {
+  it('allows entering any custom rental address and generates an immediate verdict', () => {
+    render(<App />);
+
+    const addressInput = screen.getByPlaceholderText(/420 Main St, Nashville, TN 37206/i);
+    fireEvent.change(addressInput, {
+      target: { value: '742 Ocean Ave, Santa Monica, CA 90401' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Check Address/i }));
+
+    expect(screen.getAllByText(/742 Ocean Ave/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders sample undercut alert and applies recommended price drop cleanly', () => {
     render(<App />);
 
     expect(screen.getByText(/Action Needed · Undercut Alert/i)).toBeTruthy();
@@ -26,11 +38,10 @@ describe('Moisha App interactive prototype', () => {
     expect(screen.getByText(/Market Aligned · Hold Steady/i)).toBeTruthy();
   });
 
-  it('switches to House 3 (Dupont) and displays revenue upside without House 1 text leakage', () => {
+  it('switches to Sample 3 (Williamsburg) and displays revenue upside', () => {
     render(<App />);
 
-    const house3Card = screen.getByText(/1742 Riggs Pl NW \(Dupont\)/i);
-    fireEvent.click(house3Card);
+    fireEvent.click(screen.getByText(/Sample · Williamsburg 2BR Loft/i));
 
     expect(screen.getByText(/Revenue Opportunity · Raise Rate/i)).toBeTruthy();
     expect(screen.getAllByRole('button', { name: /Raise Rate to \$/i }).length).toBeGreaterThanOrEqual(1);
@@ -40,7 +51,7 @@ describe('Moisha App interactive prototype', () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole('button', { name: /Comps & Submarket/i }));
-    expect(screen.getByText(/Comparable Neighbors Around 1114 Florida Ave NE/i)).toBeTruthy();
+    expect(screen.getByText(/Comparable Neighbors Around 1500 S Congress Ave/i)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /Profit & Promotions/i }));
     expect(screen.getByText(/Revenue, Expense & Net Profit Calculator/i)).toBeTruthy();

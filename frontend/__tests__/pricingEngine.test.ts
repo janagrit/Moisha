@@ -175,7 +175,7 @@ describe('Portfolio localStorage persistence', () => {
     expect(reloaded.houses[0].currentPrice).toBe(233);
     expect(reloaded.selectedHouseId).toBe(initial.houses[1].id);
 
-    window.localStorage.setItem('moisha_pocket_state_v1', '{not-valid-json');
+    window.localStorage.setItem('moisha_pocket_state_v2', '{not-valid-json');
     const recovered = loadPersistedState();
     expect(recovered.houses.length).toBeGreaterThanOrEqual(3);
 

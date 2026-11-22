@@ -22,8 +22,8 @@ export const QuickStartBanner: React.FC<QuickStartBannerProps> = ({
   }> = [
     {
       num: '1',
-      title: 'Pick or Add Your Property',
-      body: 'Click a sample house below to explore, or click "+ Add Property" (or "Edit") to enter your address, nightly rate, minimum floor price, and empty dates.',
+      title: 'Enter Any Rental Address',
+      body: 'Type your street address, city, or ZIP into "Check Any Rental Address" right below—along with your current rate, minimum floor price, and empty nights.',
     },
     {
       num: '2',
@@ -206,10 +206,10 @@ export const HowItWorksModal: React.FC<HowItWorksModalProps> = ({
 
             <div className="rounded-2xl border border-moisha-border p-3.5">
               <div className="font-bold text-moisha-navy">
-                Step 1 · Add or Edit Your Rental Property
+                Step 1 · Enter Any Property Address
               </div>
               <p className="mt-1 text-moisha-muted">
-                In <strong>Your Rental Portfolio</strong> at the top, click <strong>+ Add Property</strong> (or click <strong>Edit</strong> on an existing card). Enter your street address, current nightly price (e.g. $285), your <strong>Safety Floor</strong> (the lowest nightly price that still covers mortgage/utilities, e.g. $195), and your unbooked check-in / check-out dates.
+                Type any street address, city, or ZIP code into <strong>Check Any Rental Address</strong> at the top. Enter your bedrooms, current nightly price (e.g. $250), your <strong>Safety Floor</strong> (lowest acceptable rate, e.g. $175), and empty nights, then click <strong>Check Address</strong>.
               </p>
             </div>
 
