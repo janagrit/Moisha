@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
-import { HostProperty } from '../types';
+import { Loader2, AlertCircle, ArrowLeft, Link2, Check } from 'lucide-react';
+import { HostProperty, CompetitorListing, PriceChangeEvent } from '../types';
 import {
   parseAirbnbListingUrl,
-  tryFetchListingPreview,
+  ingestAirbnbListingViaApi,
   validateAndResolveUsLocation,
 } from '../services/usLocationService';
 
 interface PropertyOnboardingProps {
-  onRegisterProperty: (property: HostProperty) => void;
+  onCompleteIngest: (payload: {
+    property: HostProperty;
+    competitors: CompetitorListing[];
+    priceChanges: PriceChangeEvent[];
+  }) => void;
   onLoadPrototype?: () => void;
 }
 
@@ -22,81 +26,105 @@ const BEDROOM_OPTIONS: Array<{ label: string; value: number }> = [
 ];
 
 export const PropertyOnboarding: React.FC<PropertyOnboardingProps> = ({
-  onRegisterProperty,
+  onCompleteIngest,
   onLoadPrototype,
 }) => {
   const [airbnbUrl, setAirbnbUrl] = useState('');
+  const [needsStaticFallback, setNeedsStaticFallback] = useState(false);
   const [locationInput, setLocationInput] = useState('');
   const [bedrooms, setBedrooms] = useState<number>(3);
   const [nightlyPrice, setNightlyPrice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const runUrlImport = async (targetUrl: string) => {
     setErrorMsg(null);
-
-    const parsedAirbnb = parseAirbnbListingUrl(airbnbUrl);
+    const parsedAirbnb = parseAirbnbListingUrl(targetUrl);
     if (!parsedAirbnb) {
-      setErrorMsg('Please enter a valid Airbnb listing URL (e.g. https://www.airbnb.com/rooms/12345678).');
+      setErrorMsg(
+        'Please enter a valid public Airbnb listing link (e.g. https://www.airbnb.com/rooms/31249608).',
+      );
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const [locationResult, preview] = await Promise.all([
-        validateAndResolveUsLocation(locationInput),
-        tryFetchListingPreview(parsedAirbnb.normalizedUrl),
-      ]);
+      // If static fallback isn't active yet, extract everything automatically via backend API
+      if (!needsStaticFallback) {
+        const ingested = await ingestAirbnbListingViaApi(parsedAirbnb.normalizedUrl);
+        if (ingested.ok) {
+          onCompleteIngest({
+            property: ingested.property,
+            competitors: ingested.competitors,
+            priceChanges: ingested.priceChanges,
+          });
+          return;
+        }
 
+        if (!ingested.apiUnavailable) {
+          // Real validation error (e.g. non-US listing rejected with exact required message)
+          setErrorMsg(ingested.error);
+          return;
+        }
+
+        // Static GitHub Pages fallback (no backend server to proxy CORS-blocked airbnb.com)
+        setNeedsStaticFallback(true);
+        setErrorMsg(
+          'Static browser demo cannot read airbnb.com directly due to CORS. Enter your US ZIP/address below (or run `npm run dev` locally for 1-link auto-import).',
+        );
+        return;
+      }
+
+      // Static-only fallback path when running without the Node backend
+      const locationResult = await validateAndResolveUsLocation(locationInput);
       if (!locationResult.ok) {
         setErrorMsg(locationResult.error);
         return;
       }
 
-      const resolvedBedrooms =
-        typeof preview.bedrooms === 'number' && preview.bedrooms >= 0
-          ? preview.bedrooms
-          : bedrooms;
-
+      const parsedPrice = nightlyPrice.trim() ? Math.round(Number(nightlyPrice)) : null;
       const defaultName =
-        preview.name ||
-        (locationResult.city && !locationResult.city.startsWith('ZIP ')
-          ? resolvedBedrooms === 0
+        locationResult.city && !locationResult.city.startsWith('ZIP ')
+          ? bedrooms === 0
             ? `Studio in ${locationResult.city}`
-            : `${resolvedBedrooms}-Bedroom Home in ${locationResult.city}`
+            : `${bedrooms}-Bedroom Home in ${locationResult.city}`
           : parsedAirbnb.roomId
             ? `Airbnb Listing #${parsedAirbnb.roomId}`
-            : `${resolvedBedrooms}-Bedroom Airbnb`);
+            : `${bedrooms}-Bedroom Airbnb`;
 
-      const parsedPrice = nightlyPrice.trim() ? Math.round(Number(nightlyPrice)) : null;
-
-      const created: HostProperty = {
-        id: `prop-${Date.now()}`,
-        airbnbUrl: parsedAirbnb.normalizedUrl,
-        airbnbRoomId: parsedAirbnb.roomId,
-        name: defaultName,
-        address: locationResult.formattedAddress,
-        city: locationResult.city,
-        state: locationResult.state,
-        zipCode: locationResult.zipCode,
-        neighborhood: locationResult.neighborhood,
-        latitude: locationResult.latitude,
-        longitude: locationResult.longitude,
-        propertyType: resolvedBedrooms === 0 ? 'studio' : 'entire_home',
-        bedrooms: resolvedBedrooms,
-        bathrooms: preview.bathrooms,
-        guestCapacity: preview.guestCapacity,
-        nightlyPrice: parsedPrice && parsedPrice > 0 ? parsedPrice : null,
-        photoUrl: preview.photoUrl,
-        amenities: [],
-        createdAt: new Date().toISOString(),
-      };
-
-      onRegisterProperty(created);
+      onCompleteIngest({
+        property: {
+          id: `prop-${Date.now()}`,
+          airbnbUrl: parsedAirbnb.normalizedUrl,
+          airbnbRoomId: parsedAirbnb.roomId,
+          name: defaultName,
+          address: locationResult.formattedAddress,
+          city: locationResult.city,
+          state: locationResult.state,
+          zipCode: locationResult.zipCode,
+          neighborhood: locationResult.neighborhood,
+          latitude: locationResult.latitude,
+          longitude: locationResult.longitude,
+          propertyType: bedrooms === 0 ? 'studio' : 'entire_home',
+          bedrooms,
+          bathrooms: null,
+          guestCapacity: null,
+          nightlyPrice: parsedPrice && parsedPrice > 0 ? parsedPrice : null,
+          photoUrl: null,
+          amenities: [],
+          createdAt: new Date().toISOString(),
+        },
+        competitors: [],
+        priceChanges: [],
+      });
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runUrlImport(airbnbUrl);
   };
 
   return (
@@ -115,126 +143,154 @@ export const PropertyOnboarding: React.FC<PropertyOnboardingProps> = ({
       )}
 
       <div className="surface p-5">
-        <div className="mb-5">
+        <div className="mb-4">
           <h1 className="text-lg font-semibold tracking-tight text-slate-900">
-            Register your US Airbnb
+            Paste your Airbnb listing link
           </h1>
           <p className="mt-1 text-xs leading-relaxed text-slate-500">
-            Enter your listing once to benchmark comparable properties and track neighbor rate changes.
+            No forms to re-type. Moisha reads your public listing—rooms, amenities, nightly price, and US location—and finds nearby comparable homes automatically.
           </p>
         </div>
 
         {errorMsg && (
           <div
             role="alert"
-            className="mb-5 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
+            className="mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs text-rose-800"
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
+        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div>
-            <label htmlFor="onboard-airbnb-url" className="field-label">
+            <label htmlFor="onboard-airbnb-url" className="field-label text-xs">
               Airbnb listing URL
             </label>
-            <input
-              id="onboard-airbnb-url"
-              type="url"
-              required
-              placeholder="https://www.airbnb.com/rooms/..."
-              value={airbnbUrl}
-              onChange={(e) => setAirbnbUrl(e.target.value)}
-              className="input-field"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="onboard-location" className="field-label">
-              Property address or US ZIP code
-            </label>
-            <input
-              id="onboard-location"
-              type="text"
-              required
-              placeholder="e.g. 20002 or 1114 Florida Ave NE, Washington, DC"
-              value={locationInput}
-              onChange={(e) => setLocationInput(e.target.value)}
-              className="input-field"
-            />
-          </div>
-
-          <div>
-            <span className="field-label">Bedrooms</span>
-            <div className="grid grid-cols-6 gap-2">
-              {BEDROOM_OPTIONS.map((opt) => {
-                const isSelected =
-                  opt.value === 5 ? bedrooms >= 5 : bedrooms === opt.value;
-                return (
-                  <button
-                    key={opt.label}
-                    type="button"
-                    aria-pressed={isSelected}
-                    onClick={() => setBedrooms(opt.value)}
-                    className={`h-10 rounded-xl border text-xs font-semibold transition-colors sm:text-sm ${
-                      isSelected
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
+            <div className="relative">
+              <Link2 className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                id="onboard-airbnb-url"
+                type="url"
+                required
+                placeholder="https://www.airbnb.com/rooms/31249608"
+                value={airbnbUrl}
+                onChange={(e) => setAirbnbUrl(e.target.value)}
+                className="input-field pl-9 text-xs"
+              />
             </div>
-            {bedrooms >= 5 && (
-              <div className="mt-2.5">
-                <label htmlFor="onboard-bedrooms" className="sr-only">
-                  Exact bedroom count
+          </div>
+
+          {!needsStaticFallback && (
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 text-[11px] text-slate-600">
+              <div className="font-semibold text-slate-800">Auto-collected from your link:</div>
+              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                <span className="inline-flex items-center gap-1">
+                  <Check className="h-3 w-3 text-emerald-600" /> Nightly price
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Check className="h-3 w-3 text-emerald-600" /> Rooms &amp; baths
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Check className="h-3 w-3 text-emerald-600" /> Amenities &amp; photo
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Check className="h-3 w-3 text-emerald-600" /> Nearby comps
+                </span>
+              </div>
+            </div>
+          )}
+
+          {needsStaticFallback && (
+            <div className="space-y-3.5 border-t border-slate-100 pt-3">
+              <div>
+                <label htmlFor="onboard-location" className="field-label text-xs">
+                  Property address or US ZIP code
                 </label>
                 <input
-                  id="onboard-bedrooms"
-                  type="number"
-                  min={5}
-                  max={20}
-                  value={bedrooms}
-                  onChange={(e) => setBedrooms(Math.max(5, Math.min(20, Number(e.target.value) || 5)))}
-                  className="input-field w-28 tabular"
+                  id="onboard-location"
+                  type="text"
+                  required
+                  placeholder="e.g. 20002 or 1114 Florida Ave NE, Washington, DC"
+                  value={locationInput}
+                  onChange={(e) => setLocationInput(e.target.value)}
+                  className="input-field text-xs"
                 />
               </div>
-            )}
-          </div>
 
-          <div>
-            <label htmlFor="onboard-my-price" className="field-label">
-              My current nightly price ($, optional)
-            </label>
-            <input
-              id="onboard-my-price"
-              type="number"
-              min={10}
-              placeholder="e.g. 245"
-              value={nightlyPrice}
-              onChange={(e) => setNightlyPrice(e.target.value)}
-              className="input-field tabular"
-            />
-          </div>
+              <div>
+                <span className="field-label text-xs">Bedrooms</span>
+                <div className="grid grid-cols-6 gap-1.5">
+                  {BEDROOM_OPTIONS.map((opt) => {
+                    const isSelected =
+                      opt.value === 5 ? bedrooms >= 5 : bedrooms === opt.value;
+                    return (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => setBedrooms(opt.value)}
+                        className={`h-9 rounded-xl border text-xs font-semibold transition-colors ${
+                          isSelected
+                            ? 'border-slate-900 bg-slate-900 text-white'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="onboard-my-price" className="field-label text-xs">
+                  My current nightly price ($, optional)
+                </label>
+                <input
+                  id="onboard-my-price"
+                  type="number"
+                  min={10}
+                  placeholder="e.g. 245"
+                  value={nightlyPrice}
+                  onChange={(e) => setNightlyPrice(e.target.value)}
+                  className="input-field text-xs tabular"
+                />
+              </div>
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="btn-primary h-11 w-full"
+            className="btn-primary h-11 w-full text-xs"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Verifying US property...</span>
+                <span>Reading Airbnb listing &amp; nearby prices...</span>
               </>
             ) : (
               <span>Continue to dashboard</span>
             )}
           </button>
+
+          {!needsStaticFallback && (
+            <div className="pt-1 text-center">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => {
+                  const sampleUrl = 'https://www.airbnb.com/rooms/31249608';
+                  setAirbnbUrl(sampleUrl);
+                  void runUrlImport(sampleUrl);
+                }}
+                className="text-[11px] font-semibold text-slate-500 underline hover:text-slate-900"
+              >
+                Or test live extraction on real DC listing #31249608 →
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>

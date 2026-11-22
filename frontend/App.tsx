@@ -36,7 +36,10 @@ import {
   simulateDailyMonitoringRun,
   ParsedAirbnbCardCandidate,
 } from './services/prototypeData';
-import { buildComparableAirbnbSearchUrl } from './services/usLocationService';
+import {
+  buildComparableAirbnbSearchUrl,
+  runLiveCompetitorPriceCheckViaApi,
+} from './services/usLocationService';
 import {
   checkAiAvailable,
   fetchConciseMarketSummary,
@@ -97,14 +100,23 @@ export default function App() {
     state.lastCheckChangesCount,
   ]);
 
-  const handleRegisterProperty = (property: HostProperty) => {
+  const handleCompleteIngest = (payload: {
+    property: HostProperty;
+    competitors: CompetitorListing[];
+    priceChanges: PriceChangeEvent[];
+  }) => {
     setAiSummary(null);
-    setPushBannerChange(null);
+    setPushBannerChange(payload.priceChanges[0] ?? null);
     setActiveTab('home');
+    const nowIso = new Date().toISOString();
     setState({
       ...createInitialMonitoringState(),
       isPrototype: false,
-      property,
+      property: payload.property,
+      competitors: payload.competitors,
+      priceChanges: payload.priceChanges,
+      lastCheckedAt: payload.competitors.length > 0 ? nowIso : null,
+      lastCheckChangesCount: payload.priceChanges.length,
     });
   };
 
@@ -269,6 +281,33 @@ export default function App() {
     }));
   };
 
+  const handleRunLiveOrManualCheck = async () => {
+    if (!state.property || state.competitors.length === 0 || isSimulatingCheck) return;
+    setIsSimulatingCheck(true);
+    setAiSummary(null);
+    try {
+      const liveResult = await runLiveCompetitorPriceCheckViaApi(
+        state.property,
+        state.competitors,
+      );
+      if (liveResult.ok && Object.keys(liveResult.observedById).length > 0) {
+        const { nextState, detectedChanges } = recordPriceCheck(
+          state,
+          liveResult.observedById,
+        );
+        setState(nextState);
+        if (detectedChanges.length > 0) {
+          setPushBannerChange(detectedChanges[0]);
+        }
+        return;
+      }
+      // Fallback to manual check sheet when running offline / static hosting
+      setCheckModalOpen(true);
+    } finally {
+      setIsSimulatingCheck(false);
+    }
+  };
+
   const handleSubmitPriceCheck = (
     observedPricesById: Record<string, number>,
   ): PriceChangeEvent[] => {
@@ -322,7 +361,7 @@ export default function App() {
           if (isPrototype) {
             handleRunPrototypeCheck();
           } else {
-            setCheckModalOpen(true);
+            void handleRunLiveOrManualCheck();
           }
         }}
         onSwitchToOwnProperty={handleSwitchToOwnProperty}
@@ -330,7 +369,7 @@ export default function App() {
       >
         {!state.property || !overview ? (
           <PropertyOnboarding
-            onRegisterProperty={handleRegisterProperty}
+            onCompleteIngest={handleCompleteIngest}
             onLoadPrototype={handleLoadPrototype}
           />
         ) : activeTab === 'home' ? (

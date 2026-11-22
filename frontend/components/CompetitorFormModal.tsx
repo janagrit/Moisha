@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Loader2, AlertCircle, ClipboardPaste } from 'lucide-react';
+import { X, Loader2, AlertCircle, ClipboardPaste, Link2, SlidersHorizontal } from 'lucide-react';
 import {
   HostProperty,
   CompetitorListing,
@@ -11,7 +11,7 @@ import {
 } from '../types';
 import {
   parseAirbnbListingUrl,
-  tryFetchListingPreview,
+  fetchCompetitorFromAirbnbUrlViaApi,
   buildComparableAirbnbSearchUrl,
 } from '../services/usLocationService';
 import { evaluateCompetitorMatch } from '../services/competitorMatcher';
@@ -47,9 +47,8 @@ export const CompetitorFormModal: React.FC<CompetitorFormModalProps> = ({
   onSaveCompetitor,
   onBulkImportCompetitors,
 }) => {
-  const [mode, setMode] = useState<'single' | 'paste'>(
-    editingCompetitor ? 'single' : 'single',
-  );
+  const [mode, setMode] = useState<'single' | 'paste'>('single');
+  const [showManualFields, setShowManualFields] = useState(Boolean(editingCompetitor));
   const [pastedText, setPastedText] = useState('');
 
   const [airbnbUrl, setAirbnbUrl] = useState(editingCompetitor?.airbnbUrl || '');
@@ -75,7 +74,7 @@ export const CompetitorFormModal: React.FC<CompetitorFormModalProps> = ({
   );
   const [photoUrl, setPhotoUrl] = useState(editingCompetitor?.photoUrl || '');
   const [amenities, setAmenities] = useState<Amenity[]>(editingCompetitor?.amenities || []);
-  const [isFetchingPreview, setIsFetchingPreview] = useState(false);
+  const [isImportingUrl, setIsImportingUrl] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -91,42 +90,68 @@ export const CompetitorFormModal: React.FC<CompetitorFormModalProps> = ({
     [pastedText],
   );
 
-  const handleUrlBlur = async () => {
-    if (editingCompetitor || !airbnbUrl.trim()) return;
-    const parsed = parseAirbnbListingUrl(airbnbUrl);
-    if (!parsed) return;
-
-    setIsFetchingPreview(true);
-    try {
-      const preview = await tryFetchListingPreview(parsed.normalizedUrl);
-      if (preview.name && !name.trim()) setName(preview.name);
-      if (preview.photoUrl && !photoUrl.trim()) setPhotoUrl(preview.photoUrl);
-      if (preview.bedrooms !== null) setBedrooms(String(preview.bedrooms));
-      if (preview.bathrooms !== null && !bathrooms.trim()) {
-        setBathrooms(String(preview.bathrooms));
-      }
-      if (preview.guestCapacity !== null && !guestCapacity.trim()) {
-        setGuestCapacity(String(preview.guestCapacity));
-      }
-    } finally {
-      setIsFetchingPreview(false);
-    }
-  };
-
   const toggleAmenity = (item: Amenity) => {
     setAmenities((prev) =>
       prev.includes(item) ? prev.filter((a) => a !== item) : [...prev, item],
     );
   };
 
-  const handleSubmitSingle = (e: React.FormEvent) => {
+  const handleSubmitSingle = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
     const parsedUrl = parseAirbnbListingUrl(airbnbUrl);
     if (!parsedUrl) {
-      setErrorMsg('Please enter a valid Airbnb URL (e.g. https://www.airbnb.com/rooms/12345678).');
+      setErrorMsg('Please enter a valid Airbnb URL (e.g. https://www.airbnb.com/rooms/31249608).');
       return;
+    }
+
+    // One-link auto-extraction when user only entered the Airbnb URL
+    if (!editingCompetitor && !showManualFields) {
+      setIsImportingUrl(true);
+      try {
+        const extracted = await fetchCompetitorFromAirbnbUrlViaApi(parsedUrl.normalizedUrl);
+        if (extracted.ok && extracted.competitor.nightlyPrice !== null) {
+          onSaveCompetitor({
+            airbnbUrl: extracted.competitor.airbnbUrl,
+            airbnbRoomId: extracted.competitor.airbnbRoomId,
+            name: extracted.competitor.name,
+            propertyType: extracted.competitor.propertyType,
+            bedrooms: extracted.competitor.bedrooms,
+            bathrooms: extracted.competitor.bathrooms,
+            guestCapacity: extracted.competitor.guestCapacity,
+            nightlyPrice: extracted.competitor.nightlyPrice,
+            photoUrl: extracted.competitor.photoUrl,
+            amenities: extracted.competitor.amenities,
+          });
+          onClose();
+          return;
+        }
+
+        // Pre-populate whatever was extracted and reveal the price field if dates were unavailable or offline
+        if (extracted.ok) {
+          setName(extracted.competitor.name);
+          setPropertyType(extracted.competitor.propertyType);
+          setBedrooms(String(extracted.competitor.bedrooms));
+          if (extracted.competitor.bathrooms !== null) {
+            setBathrooms(String(extracted.competitor.bathrooms));
+          }
+          if (extracted.competitor.guestCapacity !== null) {
+            setGuestCapacity(String(extracted.competitor.guestCapacity));
+          }
+          if (extracted.competitor.photoUrl) setPhotoUrl(extracted.competitor.photoUrl);
+          setAmenities(extracted.competitor.amenities);
+        }
+        setShowManualFields(true);
+        setErrorMsg(
+          extracted.ok
+            ? 'Extracted listing details! Enter its current nightly price below (calendar dates were booked).'
+            : 'Auto-extract requires the local backend (`npm run dev`). Enter nightly price below or use Paste Airbnb page.',
+        );
+        return;
+      } finally {
+        setIsImportingUrl(false);
+      }
     }
 
     const priceNum = Math.round(Number(nightlyPrice));
@@ -201,13 +226,13 @@ export const CompetitorFormModal: React.FC<CompetitorFormModalProps> = ({
       aria-labelledby="comp-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
     >
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 id="comp-modal-title" className="text-lg font-semibold text-slate-900">
-              {editingCompetitor ? 'Edit competitor listing' : 'Add competitor listings'}
+            <h2 id="comp-modal-title" className="text-base font-semibold text-slate-900">
+              {editingCompetitor ? 'Edit competitor listing' : 'Add competitor by Airbnb link'}
             </h2>
-            <p className="text-xs text-slate-500">Target match: {targetMatchLabel}</p>
+            <p className="text-xs text-slate-500">Target: {targetMatchLabel}</p>
           </div>
           <button
             type="button"
@@ -220,20 +245,21 @@ export const CompetitorFormModal: React.FC<CompetitorFormModalProps> = ({
         </div>
 
         {!editingCompetitor && (
-          <div className="mb-5 grid grid-cols-2 gap-1.5 rounded-xl bg-slate-100 p-1">
+          <div className="mb-4 grid grid-cols-2 gap-1.5 rounded-xl bg-slate-100 p-1">
             <button
               type="button"
               onClick={() => {
                 setErrorMsg(null);
                 setMode('single');
               }}
-              className={`rounded-lg py-1.5 text-xs font-semibold transition-colors ${
+              className={`inline-flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${
                 mode === 'single'
                   ? 'bg-white text-slate-900 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Single listing
+              <Link2 className="h-3.5 w-3.5" />
+              <span>Airbnb link</span>
             </button>
             <button
               type="button"
@@ -248,7 +274,7 @@ export const CompetitorFormModal: React.FC<CompetitorFormModalProps> = ({
               }`}
             >
               <ClipboardPaste className="h-3.5 w-3.5" />
-              <span>Paste Airbnb page (fast)</span>
+              <span>Paste Airbnb page</span>
             </button>
           </div>
         )}
@@ -265,8 +291,8 @@ export const CompetitorFormModal: React.FC<CompetitorFormModalProps> = ({
 
         {mode === 'paste' && !editingCompetitor ? (
           <form onSubmit={handleSubmitPaste} className="space-y-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">
-              1. Open{' '}
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs leading-relaxed text-slate-600">
+              Open{' '}
               <a
                 href={buildComparableAirbnbSearchUrl(hostProperty)}
                 target="_blank"
@@ -275,17 +301,16 @@ export const CompetitorFormModal: React.FC<CompetitorFormModalProps> = ({
               >
                 Airbnb near {hostProperty.neighborhood}
               </a>
-              .<br />
-              2. Select &amp; copy the search results (`Cmd+A`, `Cmd+C`) and paste below. Moisha automatically extracts titles, bedrooms, baths, and rates—and filters out non-comparable units.
+              , copy the search page (`Cmd+A`, `Cmd+C`), and paste below.
             </div>
 
             <div>
-              <label htmlFor="paste-airbnb-raw" className="field-label">
+              <label htmlFor="paste-airbnb-raw" className="field-label text-xs">
                 Copied Airbnb search text
               </label>
               <textarea
                 id="paste-airbnb-raw"
-                rows={6}
+                rows={5}
                 placeholder={`Home in Washington\nRow home with a fire pit near H St\n3 bedrooms · 4 queen beds · 2.5 baths\n$183 for 1 night`}
                 value={pastedText}
                 onChange={(e) => setPastedText(e.target.value)}
@@ -349,29 +374,21 @@ export const CompetitorFormModal: React.FC<CompetitorFormModalProps> = ({
               </div>
             )}
 
-            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-              <button type="button" onClick={onClose} className="btn-secondary">
+            <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+              <button type="button" onClick={onClose} className="btn-secondary h-9 text-xs">
                 Cancel
               </button>
-              <button type="submit" className="btn-primary">
+              <button type="submit" className="btn-primary h-9 text-xs">
                 Import {parsedCandidates.length > 0 ? `${parsedCandidates.length} listings` : 'listings'}
               </button>
             </div>
           </form>
         ) : (
-          <form onSubmit={handleSubmitSingle} className="space-y-4">
+          <form onSubmit={(e) => void handleSubmitSingle(e)} className="space-y-4">
             <div>
-              <div className="flex items-center justify-between">
-                <label htmlFor="comp-airbnb-url" className="field-label">
-                  Airbnb listing URL *
-                </label>
-                {isFetchingPreview && (
-                  <span className="mb-1 inline-flex items-center gap-1 text-xs text-slate-400">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Checking metadata...
-                  </span>
-                )}
-              </div>
+              <label htmlFor="comp-airbnb-url" className="field-label text-xs">
+                Public Airbnb listing URL
+              </label>
               <input
                 id="comp-airbnb-url"
                 type="url"
@@ -379,165 +396,181 @@ export const CompetitorFormModal: React.FC<CompetitorFormModalProps> = ({
                 placeholder="https://www.airbnb.com/rooms/..."
                 value={airbnbUrl}
                 onChange={(e) => setAirbnbUrl(e.target.value)}
-                onBlur={() => void handleUrlBlur()}
-                className="input-field"
+                className="input-field text-xs"
               />
+              {!editingCompetitor && !showManualFields && (
+                <p className="mt-1.5 text-[11px] text-slate-500">
+                  Paste just the link—Moisha automatically collects its rooms, amenities, photo, and nightly price.
+                </p>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-              <div>
-                <label htmlFor="comp-name" className="field-label">
-                  Property name
-                </label>
-                <input
-                  id="comp-name"
-                  type="text"
-                  placeholder="e.g. Modern 3BR Rowhome"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="input-field"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="comp-price" className="field-label">
-                  Nightly price ($) *
-                </label>
-                <input
-                  id="comp-price"
-                  type="number"
-                  required
-                  min={10}
-                  placeholder="e.g. 245"
-                  value={nightlyPrice}
-                  onChange={(e) => setNightlyPrice(e.target.value)}
-                  className="input-field font-semibold tabular"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="col-span-2 sm:col-span-1">
-                <label htmlFor="comp-type" className="field-label">
-                  Type
-                </label>
-                <select
-                  id="comp-type"
-                  value={propertyType}
-                  onChange={(e) => setPropertyType(e.target.value as PropertyType)}
-                  className="input-field px-2.5"
-                >
-                  <option value="entire_home">Entire home</option>
-                  <option value="studio">Studio</option>
-                  <option value="private_room">Private room</option>
-                  <option value="shared_room">Shared room</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="comp-beds" className="field-label">
-                  Bedrooms
-                </label>
-                <input
-                  id="comp-beds"
-                  type="number"
-                  min={0}
-                  max={20}
-                  disabled={propertyType === 'studio'}
-                  value={propertyType === 'studio' ? '0' : bedrooms}
-                  onChange={(e) => setBedrooms(e.target.value)}
-                  className="input-field tabular disabled:bg-slate-50"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="comp-baths" className="field-label">
-                  Baths
-                </label>
-                <input
-                  id="comp-baths"
-                  type="number"
-                  min={0}
-                  step="0.5"
-                  placeholder="—"
-                  value={bathrooms}
-                  onChange={(e) => setBathrooms(e.target.value)}
-                  className="input-field tabular"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="comp-guests" className="field-label">
-                  Guests
-                </label>
-                <input
-                  id="comp-guests"
-                  type="number"
-                  min={1}
-                  placeholder="—"
-                  value={guestCapacity}
-                  onChange={(e) => setGuestCapacity(e.target.value)}
-                  className="input-field tabular"
-                />
-              </div>
-            </div>
-
-            {previewEvaluation.tier === 'secondary' && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-600">
-                Secondary match ({previewEvaluation.matchReason}): shown in Secondary matches and kept separate from your primary average.
-              </div>
+            {!editingCompetitor && !showManualFields && (
+              <button
+                type="button"
+                onClick={() => setShowManualFields(true)}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-900"
+              >
+                <SlidersHorizontal className="h-3 w-3" />
+                <span>Or enter details manually</span>
+              </button>
             )}
 
-            {previewEvaluation.tier === 'excluded' && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-3.5 py-2.5 text-xs text-amber-800">
-                {previewEvaluation.matchReason}. It will be kept out of your comparable benchmark.
-              </div>
-            )}
+            {showManualFields && (
+              <>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="comp-name" className="field-label text-xs">
+                      Property name
+                    </label>
+                    <input
+                      id="comp-name"
+                      type="text"
+                      placeholder="e.g. Modern 3BR Rowhome"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="input-field text-xs"
+                    />
+                  </div>
 
-            <div>
-              <label htmlFor="comp-photo" className="field-label">
-                Photo URL (optional — leave blank if unavailable)
-              </label>
-              <input
-                id="comp-photo"
-                type="url"
-                placeholder="https://..."
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                className="input-field"
-              />
-            </div>
+                  <div>
+                    <label htmlFor="comp-price" className="field-label text-xs">
+                      Nightly price ($) *
+                    </label>
+                    <input
+                      id="comp-price"
+                      type="number"
+                      required
+                      min={10}
+                      placeholder="e.g. 245"
+                      value={nightlyPrice}
+                      onChange={(e) => setNightlyPrice(e.target.value)}
+                      className="input-field text-xs font-semibold tabular"
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <span className="field-label">Amenities (optional)</span>
-              <div className="flex flex-wrap gap-1.5">
-                {AMENITY_OPTIONS.map((amenity) => {
-                  const active = amenities.includes(amenity);
-                  return (
-                    <button
-                      key={amenity}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => toggleAmenity(amenity)}
-                      className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
-                        active
-                          ? 'border-slate-900 bg-slate-900 text-white'
-                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                      }`}
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                  <div className="col-span-2 sm:col-span-1">
+                    <label htmlFor="comp-type" className="field-label text-xs">
+                      Type
+                    </label>
+                    <select
+                      id="comp-type"
+                      value={propertyType}
+                      onChange={(e) => setPropertyType(e.target.value as PropertyType)}
+                      className="input-field px-2 text-xs"
                     >
-                      {AMENITY_LABELS[amenity]}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+                      <option value="entire_home">Entire home</option>
+                      <option value="studio">Studio</option>
+                      <option value="private_room">Private room</option>
+                      <option value="shared_room">Shared room</option>
+                    </select>
+                  </div>
 
-            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-              <button type="button" onClick={onClose} className="btn-secondary">
+                  <div>
+                    <label htmlFor="comp-beds" className="field-label text-xs">
+                      Bedrooms
+                    </label>
+                    <input
+                      id="comp-beds"
+                      type="number"
+                      min={0}
+                      max={20}
+                      disabled={propertyType === 'studio'}
+                      value={propertyType === 'studio' ? '0' : bedrooms}
+                      onChange={(e) => setBedrooms(e.target.value)}
+                      className="input-field text-xs tabular disabled:bg-slate-50"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="comp-baths" className="field-label text-xs">
+                      Baths
+                    </label>
+                    <input
+                      id="comp-baths"
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      placeholder="—"
+                      value={bathrooms}
+                      onChange={(e) => setBathrooms(e.target.value)}
+                      className="input-field text-xs tabular"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="comp-guests" className="field-label text-xs">
+                      Guests
+                    </label>
+                    <input
+                      id="comp-guests"
+                      type="number"
+                      min={1}
+                      placeholder="—"
+                      value={guestCapacity}
+                      onChange={(e) => setGuestCapacity(e.target.value)}
+                      className="input-field text-xs tabular"
+                    />
+                  </div>
+                </div>
+
+                {previewEvaluation.tier === 'secondary' && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                    Secondary match ({previewEvaluation.matchReason}): kept separate from primary average.
+                  </div>
+                )}
+
+                {previewEvaluation.tier === 'excluded' && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800">
+                    {previewEvaluation.matchReason}. Excluded from comparable benchmark.
+                  </div>
+                )}
+
+                <div>
+                  <span className="field-label text-xs">Amenities (optional)</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {AMENITY_OPTIONS.map((amenity) => {
+                      const active = amenities.includes(amenity);
+                      return (
+                        <button
+                          key={amenity}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => toggleAmenity(amenity)}
+                          className={`rounded-lg border px-2 py-1 text-[11px] font-medium transition-colors ${
+                            active
+                              ? 'border-slate-900 bg-slate-900 text-white'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {AMENITY_LABELS[amenity]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+              <button type="button" onClick={onClose} className="btn-secondary h-9 text-xs">
                 Cancel
               </button>
-              <button type="submit" className="btn-primary">
-                {editingCompetitor ? 'Save changes' : 'Save competitor'}
+              <button type="submit" disabled={isImportingUrl} className="btn-primary h-9 text-xs">
+                {isImportingUrl ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Reading Airbnb...</span>
+                  </>
+                ) : editingCompetitor ? (
+                  <span>Save changes</span>
+                ) : showManualFields ? (
+                  <span>Save competitor</span>
+                ) : (
+                  <span>Import from link</span>
+                )}
               </button>
             </div>
           </form>

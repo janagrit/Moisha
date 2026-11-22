@@ -4,6 +4,7 @@ import {
   HostProperty,
   MarketOverviewStats,
   PROPERTY_TYPE_LABELS,
+  AMENITY_LABELS,
   sanitizeExternalUrl,
 } from '../types';
 
@@ -116,6 +117,19 @@ export const MyPropertyCard: React.FC<MyPropertyCardProps> = ({
               </>
             )}
           </div>
+
+          {property.amenities.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {property.amenities.slice(0, 5).map((am) => (
+                <span
+                  key={am}
+                  className="rounded-md border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-600"
+                >
+                  {AMENITY_LABELS[am]}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

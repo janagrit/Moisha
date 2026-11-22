@@ -54,7 +54,7 @@ export function parseAirbnbListingUrl(rawUrl: string): ParsedAirbnbUrl | null {
   }
 
   const host = parsed.hostname.toLowerCase();
-  const isAirbnbHost = host === 'airbnb.com' || host.endsWith('.airbnb.com');
+  const isAirbnbHost = /^([a-z0-9-]+\.)?airbnb\.[a-z.]{2,6}$/i.test(host);
   if (!isAirbnbHost) {
     return null;
   }
@@ -381,4 +381,138 @@ export function buildComparableAirbnbSearchUrl(property: {
     .filter(Boolean)
     .join(', ') || property.address;
   return `https://www.airbnb.com/s/${encodeURIComponent(queryLocation)}/homes?${params.toString()}`;
+}
+
+import type {
+  HostProperty,
+  CompetitorListing,
+  PriceChangeEvent,
+  PropertyType,
+  Amenity,
+} from '../types';
+
+export type ClientIngestResponse =
+  | {
+      ok: true;
+      property: HostProperty;
+      competitors: CompetitorListing[];
+      priceChanges: PriceChangeEvent[];
+    }
+  | {
+      ok: false;
+      apiUnavailable?: boolean;
+      code?: string;
+      error: string;
+    };
+
+export async function ingestAirbnbListingViaApi(
+  airbnbUrl: string,
+): Promise<ClientIngestResponse> {
+  try {
+    const signal =
+      typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+        ? AbortSignal.timeout(16_000)
+        : undefined;
+    const res = await fetch(`./api/airbnb/ingest?url=${encodeURIComponent(airbnbUrl)}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal,
+    });
+    if (!res.ok) {
+      return {
+        ok: false,
+        apiUnavailable: true,
+        error: 'Live Airbnb extraction requires the backend server (`npm run dev`).',
+      };
+    }
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return {
+        ok: false,
+        apiUnavailable: true,
+        error: 'Live Airbnb extraction requires the backend server (`npm run dev`).',
+      };
+    }
+    const data = (await res.json()) as ClientIngestResponse;
+    return data;
+  } catch {
+    return {
+      ok: false,
+      apiUnavailable: true,
+      error: 'Live Airbnb extraction requires the backend server (`npm run dev`).',
+    };
+  }
+}
+
+export async function fetchCompetitorFromAirbnbUrlViaApi(airbnbUrl: string): Promise<
+  | {
+      ok: true;
+      competitor: {
+        airbnbUrl: string;
+        airbnbRoomId: string;
+        name: string;
+        propertyType: PropertyType;
+        bedrooms: number;
+        bathrooms: number | null;
+        guestCapacity: number | null;
+        nightlyPrice: number | null;
+        photoUrl: string | null;
+        amenities: Amenity[];
+      };
+    }
+  | { ok: false; apiUnavailable?: boolean; error: string }
+> {
+  try {
+    const signal =
+      typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+        ? AbortSignal.timeout(14_000)
+        : undefined;
+    const res = await fetch(`./api/airbnb/competitor?url=${encodeURIComponent(airbnbUrl)}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal,
+    });
+    if (!res.ok || !(res.headers.get('content-type') || '').includes('application/json')) {
+      return { ok: false, apiUnavailable: true, error: 'Backend extractor unavailable.' };
+    }
+    return (await res.json()) as Awaited<ReturnType<typeof fetchCompetitorFromAirbnbUrlViaApi>>;
+  } catch {
+    return { ok: false, apiUnavailable: true, error: 'Backend extractor unavailable.' };
+  }
+}
+
+export async function runLiveCompetitorPriceCheckViaApi(
+  property: HostProperty,
+  competitors: CompetitorListing[],
+): Promise<{ ok: boolean; observedById: Record<string, number> }> {
+  try {
+    const signal =
+      typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+        ? AbortSignal.timeout(14_000)
+        : undefined;
+    const res = await fetch('./api/airbnb/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        latitude: property.latitude,
+        longitude: property.longitude,
+        city: property.city,
+        state: property.state,
+        propertyType: property.propertyType,
+        bedrooms: property.bedrooms,
+        competitors: competitors.map((c) => ({ id: c.id, airbnbRoomId: c.airbnbRoomId })),
+      }),
+      signal,
+    });
+    if (!res.ok || !(res.headers.get('content-type') || '').includes('application/json')) {
+      return { ok: false, observedById: {} };
+    }
+    const data = (await res.json()) as { ok?: boolean; observedById?: Record<string, number> };
+    return {
+      ok: Boolean(data.ok),
+      observedById: data.observedById || {},
+    };
+  } catch {
+    return { ok: false, observedById: {} };
+  }
 }

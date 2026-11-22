@@ -3,40 +3,123 @@ import { render, screen, fireEvent, cleanup, within } from '@testing-library/rea
 import App from '../App';
 import { US_ONLY_ERROR_MESSAGE } from '../services/usLocationService';
 
-describe('Moisha mobile competitor-monitoring app', () => {
+describe('Moisha mobile competitor-monitoring app (1-link auto-extraction)', () => {
   beforeEach(() => {
     window.localStorage.clear();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
-      if (url.includes('nominatim.openstreetmap.org')) {
-        if (url.toLowerCase().includes('london') || url.toLowerCase().includes('toronto')) {
+
+      if (url.includes('/api/airbnb/ingest')) {
+        if (url.includes('99999999')) {
           return new Response(
-            JSON.stringify([{ lat: '51.50', lon: '-0.12', address: { country_code: 'gb' } }]),
-            { status: 200 },
+            JSON.stringify({
+              ok: false,
+              code: 'NON_US',
+              error: US_ONLY_ERROR_MESSAGE,
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
           );
         }
+
         return new Response(
-          JSON.stringify([
-            {
-              lat: '30.248',
-              lon: '-97.750',
-              address: {
-                house_number: '1500',
-                road: 'South Congress Avenue',
-                neighbourhood: 'South Congress',
-                city: 'Austin',
-                state: 'Texas',
-                'ISO3166-2-lvl4': 'US-TX',
-                postcode: '78704',
-                country_code: 'us',
-              },
+          JSON.stringify({
+            ok: true,
+            property: {
+              id: 'prop-55555555',
+              airbnbUrl: 'https://www.airbnb.com/rooms/55555555',
+              airbnbRoomId: '55555555',
+              name: 'Modern 3BR Austin Bungalow',
+              address: '1500 S Congress Ave, Austin, TX 78704',
+              city: 'Austin',
+              state: 'TX',
+              zipCode: '78704',
+              neighborhood: 'South Congress, TX',
+              latitude: 30.248,
+              longitude: -97.75,
+              propertyType: 'entire_home',
+              bedrooms: 3,
+              bathrooms: 2.5,
+              guestCapacity: 6,
+              nightlyPrice: 275,
+              photoUrl: null,
+              amenities: ['wifi', 'kitchen', 'free_parking'],
+              createdAt: '2026-11-22T12:00:00.000Z',
             },
-          ]),
-          { status: 200 },
+            competitors: [
+              {
+                id: 'airbnb-77777777',
+                airbnbUrl: 'https://www.airbnb.com/rooms/77777777',
+                airbnbRoomId: '77777777',
+                name: 'Travis Heights 3BR House',
+                propertyType: 'entire_home',
+                bedrooms: 3,
+                bathrooms: 2.5,
+                guestCapacity: 6,
+                nightlyPrice: 250,
+                previousPrice: null,
+                photoUrl: null,
+                locationNote: 'Near South Congress',
+                amenities: ['wifi', 'kitchen'],
+                lastCheckedAt: '2026-11-22T12:00:00.000Z',
+                priceHistory: [{ price: 250, recordedAt: '2026-11-22T12:00:00.000Z' }],
+              },
+              {
+                id: 'airbnb-66666666',
+                airbnbUrl: 'https://www.airbnb.com/rooms/66666666',
+                airbnbRoomId: '66666666',
+                name: 'Bouldin Creek 3BR Villa',
+                propertyType: 'entire_home',
+                bedrooms: 3,
+                bathrooms: 3,
+                guestCapacity: 8,
+                nightlyPrice: 310,
+                previousPrice: null,
+                photoUrl: null,
+                locationNote: 'Near South Congress',
+                amenities: ['wifi', 'kitchen', 'pool'],
+                lastCheckedAt: '2026-11-22T12:00:00.000Z',
+                priceHistory: [{ price: 310, recordedAt: '2026-11-22T12:00:00.000Z' }],
+              },
+              {
+                id: 'airbnb-88888888',
+                airbnbUrl: 'https://www.airbnb.com/rooms/88888888',
+                airbnbRoomId: '88888888',
+                name: 'Downtown 1BR Loft',
+                propertyType: 'entire_home',
+                bedrooms: 1,
+                bathrooms: 1,
+                guestCapacity: 2,
+                nightlyPrice: 140,
+                previousPrice: null,
+                photoUrl: null,
+                locationNote: null,
+                amenities: ['wifi'],
+                lastCheckedAt: '2026-11-22T12:00:00.000Z',
+                priceHistory: [{ price: 140, recordedAt: '2026-11-22T12:00:00.000Z' }],
+              },
+            ],
+            priceChanges: [],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
-      return new Response(JSON.stringify({ extracted: false, available: false }), {
+
+      if (url.includes('/api/airbnb/check')) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            observedById: {
+              'airbnb-77777777': 215,
+              'airbnb-66666666': 310,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+
+      return new Response(JSON.stringify({ available: false }), {
         status: 200,
+        headers: { 'Content-Type': 'application/json' },
       });
     });
   });
@@ -55,7 +138,6 @@ describe('Moisha mobile competitor-monitoring app', () => {
     );
     expect(screen.getByText('-16.8%')).toBeTruthy();
 
-    // Preview morning email alert modal
     fireEvent.click(screen.getByRole('button', { name: /Preview email alert/i }));
     const emailDialog = screen.getByRole('dialog');
     expect(
@@ -63,21 +145,17 @@ describe('Moisha mobile competitor-monitoring app', () => {
     ).toBeTruthy();
     fireEvent.click(within(emailDialog).getByRole('button', { name: /Close modal/i }));
 
-    // Switch to Comps tab in mobile bottom navigation and verify excluded non-comparables
     fireEvent.click(screen.getByRole('button', { name: /Comps/i }));
     expect(screen.getByText(/Excluded non-comparable listings \(2\)/i)).toBeTruthy();
   });
 
-  it('switches to custom listing setup and rejects non-US properties with the exact required message', async () => {
+  it('rejects non-US Airbnb links automatically with the exact required message', async () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole('button', { name: /Use my Airbnb/i }));
 
     fireEvent.change(screen.getByLabelText(/Airbnb listing URL/i), {
-      target: { value: 'https://www.airbnb.com/rooms/12345678' },
-    });
-    fireEvent.change(screen.getByLabelText(/Property address or US ZIP code/i), {
-      target: { value: '10 Downing St, London, UK' },
+      target: { value: 'https://www.airbnb.co.uk/rooms/99999999' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Continue to dashboard/i }));
 
@@ -85,40 +163,26 @@ describe('Moisha mobile competitor-monitoring app', () => {
     expect(alert.textContent).toContain(US_ONLY_ERROR_MESSAGE);
   });
 
-  it('registers a US property, imports pasted Airbnb search text, sorts mobile comp cards, and tracks price changes', async () => {
+  it('auto-imports rooms, amenities, price, and nearby comps from ONLY an Airbnb URL and runs live price checks', async () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole('button', { name: /Use my Airbnb/i }));
 
+    // User ONLY enters their Airbnb URL — zero other fields!
     fireEvent.change(screen.getByLabelText(/Airbnb listing URL/i), {
       target: { value: 'https://www.airbnb.com/rooms/55555555' },
     });
-    fireEvent.change(screen.getByLabelText(/Property address or US ZIP code/i), {
-      target: { value: '1500 S Congress Ave, Austin, TX 78704' },
-    });
-    fireEvent.change(screen.getByLabelText(/My current nightly price/i), {
-      target: { value: '275' },
-    });
     fireEvent.click(screen.getByRole('button', { name: /Continue to dashboard/i }));
 
-    expect(await screen.findByText(/3-Bedroom Home in Austin/i)).toBeTruthy();
-    expect(screen.getByText('$275')).toBeTruthy();
+    expect(await screen.findByText('Modern 3BR Austin Bungalow')).toBeTruthy();
+    expect(screen.getAllByText('$275').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Wi-Fi')).toBeTruthy();
+    expect(screen.getByText('Free parking')).toBeTruthy();
 
-    // Paste copied Airbnb search text with two 3BRs + one non-comparable 1BR
-    fireEvent.click(screen.getByRole('button', { name: /Add or paste competitors/i }));
-    const compDialog = screen.getByRole('dialog');
-    fireEvent.click(within(compDialog).getByRole('button', { name: /Paste Airbnb page/i }));
-    fireEvent.change(within(compDialog).getByLabelText(/Copied Airbnb search text/i), {
-      target: {
-        value: `Home in Austin\nTravis Heights 3BR House\n3 bedrooms · 2.5 baths\n$250 for 1 night\n\nHome in Austin\nBouldin Creek 3BR Villa\n3 bedrooms · 3 baths\n$310 for 1 night\n\nApartment in Austin\nDowntown 1BR Loft\n1 bedroom · 1 bath\n$140 for 1 night`,
-      },
-    });
-    fireEvent.click(within(compDialog).getByRole('button', { name: /Import 3 listings/i }));
-
-    // Bulk import navigates straight to Comps tab
+    // Navigate to Comps tab and verify auto-discovered comps + excluded 1BR + sorting
+    fireEvent.click(screen.getByRole('button', { name: /Comps/i }));
     expect(screen.getByText(/Excluded non-comparable listings \(1\)/i)).toBeTruthy();
 
-    // Sort high to low and verify Bouldin Creek ($310) appears before Travis Heights ($250)
     const compsSection = screen.getByRole('region', { name: /Competitor listings/i });
     const sortSelect = within(compsSection).getByLabelText(/Sort competitor listings/i);
     fireEvent.change(sortSelect, { target: { value: 'price_desc' } });
@@ -126,17 +190,9 @@ describe('Moisha mobile competitor-monitoring app', () => {
     expect(items[0].textContent).toContain('Bouldin Creek 3BR Villa');
     expect(items[1].textContent).toContain('Travis Heights 3BR House');
 
-    // Run a price check where Travis Heights 3BR drops from $250 -> $215 (-14.0%)
+    // Tap Check prices -> runs automatic live API check ($250 -> $215 = -14.0%) with zero manual typing
     fireEvent.click(screen.getByRole('button', { name: /^Check prices$/i }));
-    const checkDialog = screen.getByRole('dialog');
-    const checkInput = within(checkDialog).getByLabelText(
-      /Observed nightly price for Travis Heights 3BR House/i,
-    );
-    fireEvent.change(checkInput, { target: { value: '215' } });
-    fireEvent.click(within(checkDialog).getByRole('button', { name: /Save check/i }));
-
-    // Switch to Changes tab to verify -14.0% logged
-    fireEvent.click(screen.getByRole('button', { name: /Changes/i }));
-    expect(screen.getByText('-14.0%')).toBeTruthy();
+    fireEvent.click(await screen.findByRole('button', { name: /Changes/i }));
+    expect(await screen.findByText('-14.0%')).toBeTruthy();
   });
 });
