@@ -63,7 +63,7 @@ export const QuickStartBanner: React.FC<QuickStartBannerProps> = ({
               First time here? How to use Moisha in 4 easy steps
             </h2>
             <p className="text-xs text-moisha-muted">
-              No login or setup needed — try the sample listings or enter your own rental in under a minute.
+              No login or setup needed — enter your property address below to get started in seconds.
             </p>
           </div>
         </div>
@@ -290,7 +290,7 @@ export const HowItWorksModal: React.FC<HowItWorksModalProps> = ({
                 <strong>Works without any API key:</strong> All pricing, promotion, and profit calculations run automatically in your browser. (Advanced users can optionally add a Gemini API key in ⚙️ Settings.)
               </li>
               <li>
-                <strong>Start fresh anytime:</strong> Click the ⚙️ gear icon at the top right and select <strong>Reset Demo Data</strong>.
+                <strong>Start fresh anytime:</strong> Click the ⚙️ gear icon at the top right and select <strong>Clear Saved Data</strong>.
               </li>
             </ul>
           </div>

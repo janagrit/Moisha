@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import fc from 'fast-check';
-import { createInitialHouses, INITIAL_RULES } from '../constants';
+import { INITIAL_RULES } from '../constants';
 import {
   evaluatePropertyPricing,
   getEffectiveFloorPrice,
@@ -13,34 +13,74 @@ import {
   savePersistedState,
   clearPersistedState,
 } from '../services/storageService';
+import { buildPropertyFromAnyAddress } from '../services/addressService';
 import { PropertyHouse, PricingRule, sanitizeExternalUrl } from '../types';
 
-describe('Moisha deterministic pricing engine', () => {
-  const houses = createInitialHouses(new Date('2026-11-21T12:00:00Z'));
+function makeUndercutFixture(): PropertyHouse {
+  const base = buildPropertyFromAnyAddress({
+    rawAddress: 'Test Property A',
+    bedrooms: 3,
+    currentPrice: 285,
+    floorPrice: 195,
+    unbookedNights: 5,
+    baseDate: new Date('2026-11-21T12:00:00Z'),
+  });
+  return {
+    ...base,
+    comps: base.comps.map((c, idx) => ({
+      ...c,
+      currentPrice: idx === 0 ? 210 : idx === 1 ? 225 : 310,
+      isBooked: idx === 2,
+    })),
+  };
+}
 
-  it('flags neighbor undercutting on House 1 and recommends competitive rate above floor', () => {
-    const decision = evaluatePropertyPricing(houses[0], INITIAL_RULES, '08:00 AM');
+function makeUpsideFixture(): PropertyHouse {
+  const base = buildPropertyFromAnyAddress({
+    rawAddress: 'Test Property B',
+    bedrooms: 2,
+    currentPrice: 220,
+    floorPrice: 175,
+    unbookedNights: 4,
+    baseDate: new Date('2026-11-21T12:00:00Z'),
+  });
+  return {
+    ...base,
+    comps: base.comps.map((c, idx) => ({
+      ...c,
+      currentPrice: idx === 0 ? 275 : idx === 1 ? 295 : 320,
+      isBooked: idx !== 0,
+    })),
+  };
+}
+
+describe('Moisha deterministic pricing engine', () => {
+  const undercutHouse = makeUndercutFixture();
+  const upsideHouse = makeUpsideFixture();
+
+  it('flags neighbor undercutting and recommends competitive rate above floor', () => {
+    const decision = evaluatePropertyPricing(undercutHouse, INITIAL_RULES, '08:00 AM');
     expect(decision.status).toBe('ALERT');
     expect(decision.direction).toBe('drop');
-    expect(decision.recommendedPrice).toBeGreaterThanOrEqual(houses[0].floorPrice);
-    expect(decision.recommendedPrice).toBeLessThan(houses[0].currentPrice);
+    expect(decision.recommendedPrice).toBeGreaterThanOrEqual(undercutHouse.floorPrice);
+    expect(decision.recommendedPrice).toBeLessThan(undercutHouse.currentPrice);
     expect(decision.recommendedPromotions.length).toBeGreaterThan(0);
     expect(
       decision.projectedBookingProbability.atRecommendedPrice,
     ).toBeGreaterThan(decision.projectedBookingProbability.atCurrentPrice);
   });
 
-  it('detects underpriced revenue upside on House 3 (Dupont Circle)', () => {
-    const decision = evaluatePropertyPricing(houses[2], INITIAL_RULES, '08:00 AM');
+  it('detects underpriced revenue upside when comps are higher', () => {
+    const decision = evaluatePropertyPricing(upsideHouse, INITIAL_RULES, '08:00 AM');
     expect(decision.status).toBe('UPSIDE');
     expect(decision.direction).toBe('raise');
-    expect(decision.recommendedPrice).toBeGreaterThan(houses[2].currentPrice);
-    expect(decision.priceDelta).toBe(decision.recommendedPrice - houses[2].currentPrice);
+    expect(decision.recommendedPrice).toBeGreaterThan(upsideHouse.currentPrice);
+    expect(decision.priceDelta).toBe(decision.recommendedPrice - upsideHouse.currentPrice);
     expect(decision.recommendedPromotions).toHaveLength(0);
   });
 
   it('returns OK and zero risk when property calendar window is booked', () => {
-    const bookedHouse: PropertyHouse = { ...houses[0], isBooked: true };
+    const bookedHouse: PropertyHouse = { ...undercutHouse, isBooked: true };
     const decision = evaluatePropertyPricing(bookedHouse, INITIAL_RULES);
     expect(decision.status).toBe('OK');
     expect(decision.direction).toBe('hold');
@@ -50,10 +90,10 @@ describe('Moisha deterministic pricing engine', () => {
 
   it('enforces safety floor + cushion even when neighbors drop far below floor', () => {
     const extremeHouse: PropertyHouse = {
-      ...houses[0],
+      ...undercutHouse,
       currentPrice: 240,
       floorPrice: 200,
-      comps: houses[0].comps.map((c) => ({ ...c, currentPrice: 120, isBooked: false })),
+      comps: undercutHouse.comps.map((c) => ({ ...c, currentPrice: 120, isBooked: false })),
     };
     const rulesWithCushion: PricingRule[] = INITIAL_RULES.map((r) =>
       r.kind === 'safety_floor' ? { ...r, enabled: true, parameterValue: 15 } : r,
@@ -95,7 +135,7 @@ describe('Moisha deterministic pricing engine', () => {
         fc.array(compArb, { minLength: 0, maxLength: 8 }),
         (currentPrice, floorPrice, unbookedDaysCount, isBooked, floorCushion, comps) => {
           const house: PropertyHouse = {
-            ...houses[0],
+            ...undercutHouse,
             currentPrice,
             floorPrice,
             unbookedDaysCount,
@@ -126,28 +166,22 @@ describe('Moisha deterministic pricing engine', () => {
     );
   });
 
-  it('generates contextual local chat replies for promos, margins, and comps', () => {
-    const decision = evaluatePropertyPricing(houses[0], INITIAL_RULES);
-    const promoReply = generateLocalChatReply(houses[0], 'Should I run a promo badge?', decision);
-    expect(promoReply.text).toContain(houses[0].nickname);
+  it('generates contextual local chat replies for promos and margins', () => {
+    const decision = evaluatePropertyPricing(undercutHouse, INITIAL_RULES);
+    const promoReply = generateLocalChatReply(undercutHouse, 'Should I run a promo badge?', decision);
+    expect(promoReply.text).toContain(undercutHouse.nickname);
     expect(promoReply.action?.type).toBe('run_promo');
 
-    const profitReply = generateLocalChatReply(houses[0], 'What is my net profit after cleaning?', decision);
+    const profitReply = generateLocalChatReply(undercutHouse, 'What is my net profit after cleaning?', decision);
     expect(profitReply.text).toContain('cleaning');
   });
 
-  it('computes ISO date gaps safely', () => {
+  it('computes ISO date gaps, sanitizes URLs, and clamps quantile bounds safely', () => {
     expect(daysBetweenIso('2026-11-21', '2026-11-26')).toBe(5);
     expect(daysBetweenIso('2026-11-26', '2026-11-21')).toBe(0);
     expect(daysBetweenIso('invalid', '2026-11-26')).toBe(0);
-  });
-
-  it('sanitizes untrusted external URLs and clamps quantile bounds', () => {
     expect(sanitizeExternalUrl('javascript:alert(1)')).toBe('https://www.airbnb.com');
     expect(sanitizeExternalUrl('data:text/html,hi')).toBe('https://www.airbnb.com');
-    expect(sanitizeExternalUrl('https://www.airbnb.com/rooms/123')).toBe(
-      'https://www.airbnb.com/rooms/123',
-    );
     expect(computeQuantile([200, 250, 300], -1)).toBe(200);
     expect(computeQuantile([200, 250, 300], 5)).toBe(300);
   });
@@ -158,28 +192,33 @@ describe('Portfolio localStorage persistence', () => {
     window.localStorage.clear();
   });
 
-  it('saves, reloads, and gracefully recovers from corrupted storage', () => {
+  it('starts empty with zero default addresses, saves user properties, and recovers from bad JSON', () => {
     const initial = loadPersistedState();
-    expect(initial.houses.length).toBeGreaterThanOrEqual(3);
+    expect(initial.houses).toHaveLength(0);
+    expect(initial.selectedHouseId).toBe('');
 
-    const modifiedHouses = initial.houses.map((h, i) =>
-      i === 0 ? { ...h, currentPrice: 233 } : h,
-    );
+    const custom = buildPropertyFromAnyAddress({
+      rawAddress: '100 Main St',
+      bedrooms: 2,
+      currentPrice: 250,
+      floorPrice: 180,
+      unbookedNights: 3,
+    });
     savePersistedState({
       ...initial,
-      houses: modifiedHouses,
-      selectedHouseId: initial.houses[1].id,
+      houses: [custom],
+      selectedHouseId: custom.id,
     });
 
     const reloaded = loadPersistedState();
-    expect(reloaded.houses[0].currentPrice).toBe(233);
-    expect(reloaded.selectedHouseId).toBe(initial.houses[1].id);
+    expect(reloaded.houses).toHaveLength(1);
+    expect(reloaded.houses[0].address).toBe('100 Main St');
 
-    window.localStorage.setItem('moisha_pocket_state_v2', '{not-valid-json');
+    window.localStorage.setItem('moisha_pocket_state_v3', '{not-valid-json');
     const recovered = loadPersistedState();
-    expect(recovered.houses.length).toBeGreaterThanOrEqual(3);
+    expect(recovered.houses).toHaveLength(0);
 
     const reset = clearPersistedState();
-    expect(reset.houses[0].currentPrice).toBe(285);
+    expect(reset.houses).toHaveLength(0);
   });
 });

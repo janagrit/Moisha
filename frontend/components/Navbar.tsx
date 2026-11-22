@@ -3,8 +3,8 @@ import { Play, Sparkles, Settings, CircleHelp } from 'lucide-react';
 import { AgentDecision, PropertyHouse } from '../types';
 
 interface NavbarProps {
-  selectedHouse: PropertyHouse;
-  decision: AgentDecision;
+  selectedHouse: PropertyHouse | null;
+  decision: AgentDecision | null;
   isScanning: boolean;
   onTriggerScan: () => void;
   lastScannedTime: string | null;
@@ -23,21 +23,25 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenGuide,
   onOpenSettings,
 }) => {
-  const statusDotClass = isScanning
-    ? 'bg-moisha-royal'
-    : decision.status === 'ALERT'
-      ? 'bg-amber-600'
-      : decision.status === 'UPSIDE'
-        ? 'bg-moisha-royal'
-        : 'bg-moisha-green';
+  const statusDotClass = !selectedHouse || !decision
+    ? 'bg-slate-400'
+    : isScanning
+      ? 'bg-moisha-royal'
+      : decision.status === 'ALERT'
+        ? 'bg-amber-600'
+        : decision.status === 'UPSIDE'
+          ? 'bg-moisha-royal'
+          : 'bg-moisha-green';
 
-  const statusText = isScanning
-    ? `Analyzing ${selectedHouse.nickname}...`
-    : decision.status === 'ALERT'
-      ? `${selectedHouse.unbookedDaysCount} Empty Nights Need Action`
-      : decision.status === 'UPSIDE'
-        ? `+${decision.percentDelta}% Rate Upside Available`
-        : 'Neighborhood Rate In Harmony';
+  const statusText = !selectedHouse || !decision
+    ? 'Ready · Enter an address below'
+    : isScanning
+      ? `Analyzing ${selectedHouse.nickname}...`
+      : decision.status === 'ALERT'
+        ? `${selectedHouse.unbookedDaysCount} Empty Nights Need Action`
+        : decision.status === 'UPSIDE'
+          ? `+${decision.percentDelta}% Rate Upside Available`
+          : 'Neighborhood Rate In Harmony';
 
   return (
     <header className="sticky top-0 z-40 border-b border-moisha-border bg-white/95 backdrop-blur">
@@ -61,7 +65,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </div>
             <p className="truncate text-xs text-moisha-muted">
-              {selectedHouse.nickname} · {selectedHouse.neighborhood}
+              {selectedHouse
+                ? `${selectedHouse.nickname} · ${selectedHouse.neighborhood}`
+                : 'Short-term rental pricing & profit advisor'}
             </p>
           </div>
         </div>
@@ -70,9 +76,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="hidden items-center gap-3 rounded-2xl border border-moisha-border bg-moisha-sand px-3.5 py-2 text-xs xl:flex">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
-              <span
-                className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${statusDotClass}`}
-              />
+              {selectedHouse && (
+                <span
+                  className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${statusDotClass}`}
+                />
+              )}
               <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${statusDotClass}`} />
             </span>
             <span className="font-semibold text-moisha-navy">{statusText}</span>
@@ -91,7 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right Controls */}
         <div className="flex items-center gap-2">
-          {lastScannedTime && (
+          {selectedHouse && lastScannedTime && (
             <span className="hidden rounded-lg border border-moisha-border bg-moisha-sand px-2.5 py-1.5 text-xs font-medium text-moisha-muted 2xl:inline-block">
               Updated {lastScannedTime}
             </span>
@@ -110,34 +118,36 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={onOpenSettings}
             aria-label="Open settings"
-            title="AI & Portfolio Settings"
+            title="AI & App Settings"
             className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-moisha-border bg-white text-moisha-navy transition-colors hover:bg-moisha-sand"
           >
             <Settings className="h-4 w-4" />
           </button>
 
-          <button
-            type="button"
-            onClick={onTriggerScan}
-            disabled={isScanning}
-            className={`inline-flex h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-all sm:px-4 sm:text-sm ${
-              isScanning
-                ? 'cursor-not-allowed border border-moisha-border bg-moisha-sand text-moisha-muted'
-                : 'bg-moisha-navy text-white shadow-sm hover:bg-blue-950 active:scale-[0.98]'
-            }`}
-          >
-            {isScanning ? (
-              <>
-                <Sparkles className="h-4 w-4 animate-spin text-amber-300" />
-                <span>Analyzing...</span>
-              </>
-            ) : (
-              <>
-                <Play className="h-3.5 w-3.5 fill-current text-amber-300" />
-                <span>Consult Moisha</span>
-              </>
-            )}
-          </button>
+          {selectedHouse && (
+            <button
+              type="button"
+              onClick={onTriggerScan}
+              disabled={isScanning}
+              className={`inline-flex h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-all sm:px-4 sm:text-sm ${
+                isScanning
+                  ? 'cursor-not-allowed border border-moisha-border bg-moisha-sand text-moisha-muted'
+                  : 'bg-moisha-navy text-white shadow-sm hover:bg-blue-950 active:scale-[0.98]'
+              }`}
+            >
+              {isScanning ? (
+                <>
+                  <Sparkles className="h-4 w-4 animate-spin text-amber-300" />
+                  <span>Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <Play className="h-3.5 w-3.5 fill-current text-amber-300" />
+                  <span>Consult Moisha</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </header>

@@ -21,14 +21,12 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
   onAddHouse,
   onDeleteHouse,
 }) => {
-  // Prominent Quick-Address Lookup Bar State
   const [quickAddress, setQuickAddress] = useState('');
   const [quickBeds, setQuickBeds] = useState('2');
   const [quickRate, setQuickRate] = useState('245');
   const [quickFloor, setQuickFloor] = useState('175');
   const [quickNights, setQuickNights] = useState('4');
 
-  // Edit Property Modal State
   const [editingHouse, setEditingHouse] = useState<PropertyHouse | null>(null);
   const [editNickname, setEditNickname] = useState('');
   const [editAddress, setEditAddress] = useState('');
@@ -84,7 +82,7 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
     e.preventDefault();
     if (!editingHouse) return;
     const computedNights = editIsBooked ? 0 : Math.max(1, daysBetweenIso(editStartDate, editEndDate));
-    const safeFloor = Math.max(40, Number(editFloorPrice) || editingHouse.floorPrice);
+    const safeFloor = Math.max(35, Number(editFloorPrice) || editingHouse.floorPrice);
     const safePrice = Math.max(40, Number(editCurrentPrice) || editingHouse.currentPrice);
 
     onUpdateHouse(editingHouse.id, {
@@ -104,17 +102,16 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
 
   return (
     <section aria-label="Property address lookup and portfolio" className="space-y-4">
-      {/* Front-and-Center Any-Address Lookup Card */}
-      <div className="card border-moisha-royal/30 bg-white p-5 shadow-sm">
+      <div className="card border-moisha-royal/30 bg-white p-5 shadow-sm sm:p-6">
         <div className="mb-3 flex flex-col justify-between gap-1 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4 text-moisha-royal" />
             <h2 className="text-base font-extrabold text-moisha-navy">
-              Check Any Rental Address
+              Enter Your Rental Property Address
             </h2>
           </div>
           <span className="text-xs text-moisha-muted">
-            Enter any street address, city, or ZIP to generate instant pricing &amp; profit advice
+            Type any street address, city, or ZIP code to start pricing
           </span>
         </div>
 
@@ -124,12 +121,13 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
         >
           <label className="col-span-2 sm:col-span-6 lg:col-span-5">
             <span className="mb-1 block text-[11px] font-bold text-moisha-muted">
-              Property Address, City, or ZIP *
+              Street Address, City, or ZIP Code *
             </span>
             <input
+              id="rental-address-input"
               type="text"
               required
-              placeholder="e.g. 420 Main St, Nashville, TN 37206"
+              placeholder="Enter street address, city, or ZIP code"
               value={quickAddress}
               onChange={(e) => setQuickAddress(e.target.value)}
               className="field min-h-10 text-xs"
@@ -199,120 +197,120 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
         </form>
       </div>
 
-      {/* Portfolio & Sample Properties Strip */}
-      <div className="card p-5">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-bold text-moisha-navy">
-              Active Properties &amp; Example Scenarios ({houses.length})
-            </h3>
-            <p className="text-xs text-moisha-muted">
-              Click any property to inspect its pricing recommendation, or edit/remove examples anytime.
-            </p>
+      {houses.length > 0 && (
+        <div className="card p-5">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-moisha-navy">
+                Your Properties ({houses.length})
+              </h3>
+              <p className="text-xs text-moisha-muted">
+                Click a property to view its pricing advice, or click Edit to adjust dates, floor price, or delete it.
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
-          {houses.map((house) => {
-            const isSelected = house.id === selectedHouseId;
-            const hasGap = !house.isBooked && house.unbookedDaysCount > 0;
+          <div className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
+            {houses.map((house) => {
+              const isSelected = house.id === selectedHouseId;
+              const hasGap = !house.isBooked && house.unbookedDaysCount > 0;
 
-            return (
-              <article
-                key={house.id}
-                className={`flex flex-col justify-between rounded-2xl border p-4 transition-all ${
-                  isSelected
-                    ? 'border-moisha-royal bg-white shadow-sm ring-2 ring-moisha-royal/20'
-                    : 'border-moisha-border bg-moisha-sand/70 hover:border-slate-300 hover:bg-white'
-                }`}
-              >
-                <button
-                  type="button"
-                  aria-pressed={isSelected}
-                  onClick={() => onSelectHouse(house.id)}
-                  className="w-full text-left"
+              return (
+                <article
+                  key={house.id}
+                  className={`flex flex-col justify-between rounded-2xl border p-4 transition-all ${
+                    isSelected
+                      ? 'border-moisha-royal bg-white shadow-sm ring-2 ring-moisha-royal/20'
+                      : 'border-moisha-border bg-moisha-sand/70 hover:border-slate-300 hover:bg-white'
+                  }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                          isSelected
-                            ? 'bg-moisha-navy text-white'
-                            : 'border border-moisha-border bg-white text-moisha-navy'
-                        }`}
-                      >
-                        <Home className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="truncate text-sm font-bold text-moisha-navy">
-                          {house.nickname}
-                        </h4>
-                        <p className="truncate text-[11px] text-moisha-muted">
-                          {house.bedrooms} BR · {house.bathrooms} BA · {house.zipCode}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 text-right">
-                      <div className="text-base font-extrabold text-moisha-navy">
-                        ${house.currentPrice}
-                        <span className="text-[11px] font-normal text-moisha-muted">/nt</span>
-                      </div>
-                      <div className="text-[10px] font-medium text-moisha-muted">
-                        Floor ${house.floorPrice}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-2.5 flex flex-wrap items-center justify-between gap-1.5">
-                    {hasGap ? (
-                      <span className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-moisha-butter px-2.5 py-0.5 text-[11px] font-bold text-moisha-amber">
-                        <AlertCircle className="h-3 w-3 shrink-0" />
-                        {house.unbookedDaysCount} Empty Nights ({house.unbookedStartDate.slice(5)}–
-                        {house.unbookedEndDate.slice(5)})
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-lg border border-emerald-200 bg-moisha-mint px-2.5 py-0.5 text-[11px] font-bold text-moisha-green">
-                        ✓ Booked Window
-                      </span>
-                    )}
-
-                    {house.activePromotion && (
-                      <span className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-moisha-sky px-2 py-0.5 text-[10px] font-bold text-moisha-royal">
-                        <Sparkles className="h-3 w-3" />
-                        Promo ${house.activePromotion.effectivePrice}/nt
-                      </span>
-                    )}
-                  </div>
-                </button>
-
-                <div className="mt-3 flex items-center justify-between gap-2 border-t border-moisha-border/70 pt-2.5 text-xs">
-                  <div className="flex min-w-0 items-center gap-1.5 text-moisha-muted">
-                    <MapPin className="h-3.5 w-3.5 shrink-0 text-moisha-amber" />
-                    <span
-                      className="truncate text-[11px] font-medium text-moisha-navy"
-                      title={house.address}
-                    >
-                      {house.address}
-                    </span>
-                  </div>
                   <button
                     type="button"
-                    onClick={() => openEditModal(house)}
-                    aria-label={`Edit ${house.nickname}`}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-moisha-royal hover:bg-moisha-sky"
+                    aria-pressed={isSelected}
+                    onClick={() => onSelectHouse(house.id)}
+                    className="w-full text-left"
                   >
-                    <Edit3 className="h-3 w-3" />
-                    <span>Edit</span>
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                            isSelected
+                              ? 'bg-moisha-navy text-white'
+                              : 'border border-moisha-border bg-white text-moisha-navy'
+                          }`}
+                        >
+                          <Home className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="truncate text-sm font-bold text-moisha-navy">
+                            {house.nickname}
+                          </h4>
+                          <p className="truncate text-[11px] text-moisha-muted">
+                            {house.bedrooms} BR · {house.bathrooms} BA · {house.zipCode}
+                          </p>
+                        </div>
+                      </div>
 
-      {/* Edit Property Modal */}
+                      <div className="shrink-0 text-right">
+                        <div className="text-base font-extrabold text-moisha-navy">
+                          ${house.currentPrice}
+                          <span className="text-[11px] font-normal text-moisha-muted">/nt</span>
+                        </div>
+                        <div className="text-[10px] font-medium text-moisha-muted">
+                          Floor ${house.floorPrice}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-1.5">
+                      {hasGap ? (
+                        <span className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-moisha-butter px-2.5 py-0.5 text-[11px] font-bold text-moisha-amber">
+                          <AlertCircle className="h-3 w-3 shrink-0" />
+                          {house.unbookedDaysCount} Empty Nights ({house.unbookedStartDate.slice(5)}–
+                          {house.unbookedEndDate.slice(5)})
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-lg border border-emerald-200 bg-moisha-mint px-2.5 py-0.5 text-[11px] font-bold text-moisha-green">
+                          ✓ Booked Window
+                        </span>
+                      )}
+
+                      {house.activePromotion && (
+                        <span className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-moisha-sky px-2 py-0.5 text-[10px] font-bold text-moisha-royal">
+                          <Sparkles className="h-3 w-3" />
+                          Promo ${house.activePromotion.effectivePrice}/nt
+                        </span>
+                      )}
+                    </div>
+                  </button>
+
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-moisha-border/70 pt-2.5 text-xs">
+                    <div className="flex min-w-0 items-center gap-1.5 text-moisha-muted">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-moisha-amber" />
+                      <span
+                        className="truncate text-[11px] font-medium text-moisha-navy"
+                        title={house.address}
+                      >
+                        {house.address}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(house)}
+                      aria-label={`Edit ${house.nickname}`}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-moisha-royal hover:bg-moisha-sky"
+                    >
+                      <Edit3 className="h-3 w-3" />
+                      <span>Edit</span>
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {editingHouse && (
         <div
           role="dialog"
@@ -434,21 +432,17 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
               </label>
 
               <div className="flex items-center justify-between border-t border-moisha-border pt-4">
-                {houses.length > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onDeleteHouse(editingHouse.id);
-                      setEditingHouse(null);
-                    }}
-                    className="inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-bold text-moisha-red hover:bg-moisha-blush"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span>Delete</span>
-                  </button>
-                ) : (
-                  <span />
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDeleteHouse(editingHouse.id);
+                    setEditingHouse(null);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-bold text-moisha-red hover:bg-moisha-blush"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete</span>
+                </button>
 
                 <div className="flex items-center gap-2">
                   <button

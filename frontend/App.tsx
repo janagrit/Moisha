@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { BarChart3, Layers, Calculator, Sliders } from 'lucide-react';
+import { BarChart3, Layers, Calculator, Sliders, MapPin } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { PropertySelector } from './components/PropertySelector';
 import { AgentAlertBanner } from './components/AgentAlertBanner';
@@ -55,11 +55,10 @@ export default function App() {
     }
   });
   const [isScanning, setIsScanning] = useState(false);
-  const [lastScannedTime, setLastScannedTime] = useState<string | null>('08:00 AM');
+  const [lastScannedTime, setLastScannedTime] = useState<string | null>(null);
   const [proxyAvailable, setProxyAvailable] = useState(false);
   const [proxyModel, setProxyModel] = useState('gemini-2.5-flash');
 
-  // Monotonic token to discard stale in-flight Gemini scans if user edits state mid-request
   const analysisRequestIdRef = useRef(0);
 
   const [aiDecisionOverride, setAiDecisionOverride] = useState<{
@@ -72,17 +71,21 @@ export default function App() {
     setAiDecisionOverride(null);
   }, []);
 
-  const selectedHouse = useMemo(
-    () => houses.find((h) => h.id === selectedHouseId) || houses[0],
+  const selectedHouse = useMemo<PropertyHouse | null>(
+    () => houses.find((h) => h.id === selectedHouseId) ?? houses[0] ?? null,
     [houses, selectedHouseId],
   );
 
-  const baseDecision = useMemo(
-    () => evaluatePropertyPricing(selectedHouse, rules, lastScannedTime || undefined),
+  const baseDecision = useMemo<AgentDecision | null>(
+    () =>
+      selectedHouse
+        ? evaluatePropertyPricing(selectedHouse, rules, lastScannedTime || undefined)
+        : null,
     [selectedHouse, rules, lastScannedTime],
   );
 
-  const decision = useMemo<AgentDecision>(() => {
+  const decision = useMemo<AgentDecision | null>(() => {
+    if (!baseDecision || !selectedHouse) return null;
     if (aiDecisionOverride && aiDecisionOverride.houseId === selectedHouse.id) {
       return {
         ...baseDecision,
@@ -94,7 +97,7 @@ export default function App() {
       };
     }
     return baseDecision;
-  }, [aiDecisionOverride, baseDecision, selectedHouse.id]);
+  }, [aiDecisionOverride, baseDecision, selectedHouse]);
 
   useEffect(() => {
     savePersistedState({
@@ -126,23 +129,25 @@ export default function App() {
   }, [aiSettings.soundEnabled]);
 
   const appendLog = useCallback(
-    (channel: NotificationChannel, message: string, delivered = true) => {
+    (
+      house: PropertyHouse,
+      channel: NotificationChannel,
+      message: string,
+      delivered = true,
+    ) => {
       const entry: NotificationLog = {
         id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         channel,
-        recipient:
-          channel === 'browser'
-            ? 'This Device (PWA)'
-            : `${selectedHouse.propertyManagerName}`,
-        propertyNickname: selectedHouse.nickname,
+        recipient: channel === 'browser' ? 'This Device (PWA)' : `${house.propertyManagerName}`,
+        propertyNickname: house.nickname,
         message,
         delivered,
         status: delivered ? 'sent' : 'failed',
       };
       setLogs((prev) => [entry, ...prev.slice(0, 49)]);
     },
-    [selectedHouse.nickname, selectedHouse.propertyManagerName],
+    [],
   );
 
   const runAnalysisForHouse = useCallback(
@@ -189,29 +194,32 @@ export default function App() {
 
   const handleUpdateHouse = (houseId: string, updates: Partial<PropertyHouse>) => {
     invalidateAiOverride();
-    setHouses((prev) =>
-      prev.map((h) => (h.id === houseId ? { ...h, ...updates } : h)),
-    );
+    setHouses((prev) => prev.map((h) => (h.id === houseId ? { ...h, ...updates } : h)));
   };
 
   const handleAddHouse = (created: PropertyHouse) => {
     invalidateAiOverride();
     setHouses((prev) => [...prev, created]);
     setSelectedHouseId(created.id);
+    setActiveTab('overview');
+    setLastScannedTime(
+      new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    );
   };
 
   const handleDeleteHouse = (houseId: string) => {
     invalidateAiOverride();
     setHouses((prev) => {
       const remaining = prev.filter((h) => h.id !== houseId);
-      if (remaining.length > 0 && selectedHouseId === houseId) {
-        setSelectedHouseId(remaining[0].id);
+      if (selectedHouseId === houseId) {
+        setSelectedHouseId(remaining[0]?.id ?? '');
       }
-      return remaining.length > 0 ? remaining : prev;
+      return remaining;
     });
   };
 
   const handleUpdateComp = (compId: string, updates: Partial<ListingComp>) => {
+    if (!selectedHouse) return;
     invalidateAiOverride();
     setHouses((prev) =>
       prev.map((h) =>
@@ -226,6 +234,7 @@ export default function App() {
   };
 
   const handleAddComp = (newComp: Omit<ListingComp, 'id'>) => {
+    if (!selectedHouse) return;
     invalidateAiOverride();
     const created: ListingComp = {
       ...newComp,
@@ -239,6 +248,7 @@ export default function App() {
   };
 
   const handleDeleteComp = (compId: string) => {
+    if (!selectedHouse) return;
     invalidateAiOverride();
     setHouses((prev) =>
       prev.map((h) =>
@@ -250,16 +260,16 @@ export default function App() {
   };
 
   const handleSimulateNeighborDrop = () => {
+    if (!selectedHouse || selectedHouse.comps.length === 0) return;
     const targetCompIndex = selectedHouse.comps.findIndex((c) => !c.isBooked);
     const idxToDrop = targetCompIndex >= 0 ? targetCompIndex : 0;
-    if (selectedHouse.comps.length === 0) return;
 
     const updatedComps = selectedHouse.comps.map((c, idx) =>
       idx === idxToDrop
         ? {
             ...c,
             originalPrice: c.currentPrice,
-            currentPrice: Math.max(120, c.currentPrice - 25),
+            currentPrice: Math.max(85, c.currentPrice - 25),
             isBooked: false,
           }
         : c,
@@ -274,6 +284,7 @@ export default function App() {
   };
 
   const handleApplyPriceChange = (newPrice: number) => {
+    if (!selectedHouse || !decision) return;
     const clamped = Math.max(decision.effectiveFloorPrice, Math.round(newPrice));
     invalidateAiOverride();
     setHouses((prev) =>
@@ -281,12 +292,14 @@ export default function App() {
     );
     triggerChime();
     appendLog(
+      selectedHouse,
       'telegram',
       `Rate updated for ${selectedHouse.nickname}: now $${clamped}/night (floor $${decision.effectiveFloorPrice}/nt).`,
     );
   };
 
   const handleApplyPromotion = (promo: AirbnbPromotion | null) => {
+    if (!selectedHouse) return;
     invalidateAiOverride();
     setHouses((prev) =>
       prev.map((h) => (h.id === selectedHouse.id ? { ...h, activePromotion: promo } : h)),
@@ -294,6 +307,7 @@ export default function App() {
     triggerChime();
     if (promo) {
       appendLog(
+        selectedHouse,
         'telegram',
         `Promo activated on ${selectedHouse.nickname}: "${promo.badge}" at $${promo.effectivePrice}/night.`,
       );
@@ -301,11 +315,13 @@ export default function App() {
   };
 
   const handleSendReminderToPM = (promo?: AirbnbPromotion) => {
+    if (!selectedHouse || !decision) return;
     triggerChime();
     const actionSummary = promo
       ? `Activate "${promo.badge}" ($${promo.effectivePrice}/nt)`
       : `Adjust rate to $${decision.recommendedPrice}/nt`;
     appendLog(
+      selectedHouse,
       'whatsapp',
       `PM Reminder [${selectedHouse.nickname}]: ${selectedHouse.unbookedDaysCount} nights open. Recommended: ${actionSummary}.`,
     );
@@ -315,16 +331,17 @@ export default function App() {
     channel: NotificationChannel,
     text: string,
   ) => {
+    if (!selectedHouse) return;
     triggerChime();
     if (channel === 'browser') {
       const ok = await sendBrowserAlertNotification(
         `Moisha · ${selectedHouse.nickname}`,
         text,
       );
-      appendLog('browser', text, ok);
+      appendLog(selectedHouse, 'browser', text, ok);
       return;
     }
-    appendLog(channel, text, true);
+    appendLog(selectedHouse, channel, text, true);
   };
 
   const updateQuickGuideHidden = (hidden: boolean) => {
@@ -360,40 +377,42 @@ export default function App() {
     label: string;
     badge?: string;
     icon: React.ReactNode;
-  }> = [
-    {
-      id: 'overview',
-      label: 'Verdict & Copilot',
-      badge:
-        decision.status === 'ALERT'
-          ? 'Alert'
-          : decision.status === 'UPSIDE'
-            ? 'Upside'
-            : undefined,
-      icon: <BarChart3 className="h-4 w-4" />,
-    },
-    {
-      id: 'comps',
-      label: 'Comps & Submarket',
-      badge: String(selectedHouse.comps.length),
-      icon: <Layers className="h-4 w-4" />,
-    },
-    {
-      id: 'revenue',
-      label: 'Profit & Promotions',
-      badge:
-        decision.recommendedPromotions.length > 0
-          ? String(decision.recommendedPromotions.length)
-          : undefined,
-      icon: <Calculator className="h-4 w-4" />,
-    },
-    {
-      id: 'rules',
-      label: 'Rules & Alerts',
-      badge: String(rules.filter((r) => r.enabled).length),
-      icon: <Sliders className="h-4 w-4" />,
-    },
-  ];
+  }> = selectedHouse && decision
+    ? [
+        {
+          id: 'overview',
+          label: 'Verdict & Copilot',
+          badge:
+            decision.status === 'ALERT'
+              ? 'Alert'
+              : decision.status === 'UPSIDE'
+                ? 'Upside'
+                : undefined,
+          icon: <BarChart3 className="h-4 w-4" />,
+        },
+        {
+          id: 'comps',
+          label: 'Comps & Submarket',
+          badge: String(selectedHouse.comps.length),
+          icon: <Layers className="h-4 w-4" />,
+        },
+        {
+          id: 'revenue',
+          label: 'Profit & Promotions',
+          badge:
+            decision.recommendedPromotions.length > 0
+              ? String(decision.recommendedPromotions.length)
+              : undefined,
+          icon: <Calculator className="h-4 w-4" />,
+        },
+        {
+          id: 'rules',
+          label: 'Rules & Alerts',
+          badge: String(rules.filter((r) => r.enabled).length),
+          icon: <Sliders className="h-4 w-4" />,
+        },
+      ]
+    : [];
 
   return (
     <div className="flex min-h-screen flex-col bg-moisha-sand font-sans text-moisha-navy">
@@ -401,7 +420,11 @@ export default function App() {
         selectedHouse={selectedHouse}
         decision={decision}
         isScanning={isScanning}
-        onTriggerScan={() => void runAnalysisForHouse(selectedHouse, rules)}
+        onTriggerScan={() => {
+          if (selectedHouse) {
+            void runAnalysisForHouse(selectedHouse, rules);
+          }
+        }}
         lastScannedTime={lastScannedTime}
         aiActive={aiActive}
         onOpenGuide={() => setGuideModalOpen(true)}
@@ -413,157 +436,185 @@ export default function App() {
           <QuickStartBanner
             onDismiss={() => updateQuickGuideHidden(true)}
             onOpenFullGuide={() => setGuideModalOpen(true)}
-            onNavigateTab={(tab) => setActiveTab(tab)}
+            onNavigateTab={(tab) => {
+              if (selectedHouse) {
+                setActiveTab(tab);
+              } else {
+                document.getElementById('rental-address-input')?.focus();
+              }
+            }}
           />
         )}
 
         <PropertySelector
           houses={houses}
-          selectedHouseId={selectedHouse.id}
+          selectedHouseId={selectedHouse?.id ?? ''}
           onSelectHouse={handleSelectHouse}
           onUpdateHouse={handleUpdateHouse}
           onAddHouse={handleAddHouse}
           onDeleteHouse={handleDeleteHouse}
         />
 
-        <nav
-          aria-label="Workspace sections"
-          className="flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-moisha-border bg-white p-1.5 shadow-sm"
-        >
-          {tabs.map((tab) => {
-            const isCurrent = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                aria-current={isCurrent ? 'page' : undefined}
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${
-                  isCurrent
-                    ? 'bg-moisha-navy text-white shadow-sm'
-                    : 'text-moisha-muted hover:bg-moisha-sand hover:text-moisha-navy'
-                }`}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-                {tab.badge && (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+        {!selectedHouse || !decision ? (
+          <section
+            aria-label="Empty portfolio state"
+            className="card border-dashed border-moisha-border bg-white/80 p-8 text-center sm:p-12"
+          >
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-moisha-sky text-moisha-royal">
+              <MapPin className="h-6 w-6" />
+            </div>
+            <h2 className="text-lg font-extrabold text-moisha-navy">
+              Enter a Property Address Above to Get Started
+            </h2>
+            <p className="mx-auto mt-1.5 max-w-lg text-xs leading-relaxed text-moisha-muted">
+              Type any street address, city, or ZIP code, enter your current nightly rate and minimum floor price, and click{' '}
+              <strong>Check Address</strong> to see Moisha&apos;s neighborhood rate benchmark, net profit breakdown, and promotion options.
+            </p>
+          </section>
+        ) : (
+          <>
+            <nav
+              aria-label="Workspace sections"
+              className="flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-moisha-border bg-white p-1.5 shadow-sm"
+            >
+              {tabs.map((tab) => {
+                const isCurrent = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    aria-current={isCurrent ? 'page' : undefined}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${
                       isCurrent
-                        ? 'bg-white/20 text-white'
-                        : tab.badge === 'Alert'
-                          ? 'bg-moisha-butter text-moisha-amber'
-                          : 'bg-moisha-sand text-moisha-navy'
+                        ? 'bg-moisha-navy text-white shadow-sm'
+                        : 'text-moisha-muted hover:bg-moisha-sand hover:text-moisha-navy'
                     }`}
                   >
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+                    {tab.icon}
+                    <span>{tab.label}</span>
+                    {tab.badge && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          isCurrent
+                            ? 'bg-white/20 text-white'
+                            : tab.badge === 'Alert'
+                              ? 'bg-moisha-butter text-moisha-amber'
+                              : 'bg-moisha-sand text-moisha-navy'
+                        }`}
+                      >
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
 
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            <AgentAlertBanner
-              decision={decision}
-              house={selectedHouse}
-              onApplyPriceChange={handleApplyPriceChange}
-              onApplyPromotion={(promo) => handleApplyPromotion(promo)}
-              onDispatchReminder={() => handleSendReminderToPM()}
-            />
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
+                <AgentAlertBanner
+                  decision={decision}
+                  house={selectedHouse}
+                  onApplyPriceChange={handleApplyPriceChange}
+                  onApplyPromotion={(promo) => handleApplyPromotion(promo)}
+                  onDispatchReminder={() => handleSendReminderToPM()}
+                />
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <MarketCharts house={selectedHouse} decision={decision} />
-              <PocketAdvisorChat
-                key={selectedHouse.id}
-                house={selectedHouse}
-                decision={decision}
-                aiSettings={aiSettings}
-                proxyAvailable={proxyAvailable}
-                onApplyAction={(type, value) => {
-                  if (type === 'set_price') {
-                    handleApplyPriceChange(value);
-                  } else if (decision.recommendedPromotions[0]) {
-                    handleApplyPromotion({
-                      ...decision.recommendedPromotions[0],
-                      status: 'applied',
-                    });
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  <MarketCharts house={selectedHouse} decision={decision} />
+                  <PocketAdvisorChat
+                    key={selectedHouse.id}
+                    house={selectedHouse}
+                    decision={decision}
+                    aiSettings={aiSettings}
+                    proxyAvailable={proxyAvailable}
+                    onApplyAction={(type, value) => {
+                      if (type === 'set_price') {
+                        handleApplyPriceChange(value);
+                      } else if (decision.recommendedPromotions[0]) {
+                        handleApplyPromotion({
+                          ...decision.recommendedPromotions[0],
+                          status: 'applied',
+                        });
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'comps' && (
+              <div className="space-y-6">
+                <CompsManager
+                  house={selectedHouse}
+                  comps={selectedHouse.comps}
+                  myPrice={selectedHouse.currentPrice}
+                  onUpdateComp={handleUpdateComp}
+                  onAddComp={handleAddComp}
+                  onDeleteComp={handleDeleteComp}
+                  onSimulateNeighborUndercut={handleSimulateNeighborDrop}
+                />
+                <LiveMarketGroundingCard
+                  key={selectedHouse.id}
+                  house={selectedHouse}
+                  decision={decision}
+                  aiSettings={aiSettings}
+                  proxyAvailable={proxyAvailable}
+                />
+              </div>
+            )}
+
+            {activeTab === 'revenue' && (
+              <div className="space-y-6">
+                <RevenueCalculator
+                  house={selectedHouse}
+                  decision={decision}
+                  onUpdateHouseCosts={(updates) =>
+                    handleUpdateHouse(selectedHouse.id, updates)
                   }
-                }}
-              />
-            </div>
-          </div>
-        )}
+                  onApplyPrice={handleApplyPriceChange}
+                />
+                <PromotionPlanner
+                  house={selectedHouse}
+                  promotions={decision.recommendedPromotions}
+                  effectiveFloorPrice={decision.effectiveFloorPrice}
+                  onApplyPromotion={handleApplyPromotion}
+                  onSendReminderToPM={(promo) => handleSendReminderToPM(promo)}
+                />
+              </div>
+            )}
 
-        {activeTab === 'comps' && (
-          <div className="space-y-6">
-            <CompsManager
-              house={selectedHouse}
-              comps={selectedHouse.comps}
-              myPrice={selectedHouse.currentPrice}
-              onUpdateComp={handleUpdateComp}
-              onAddComp={handleAddComp}
-              onDeleteComp={handleDeleteComp}
-              onSimulateNeighborUndercut={handleSimulateNeighborDrop}
-            />
-            <LiveMarketGroundingCard
-              key={selectedHouse.id}
-              house={selectedHouse}
-              decision={decision}
-              aiSettings={aiSettings}
-              proxyAvailable={proxyAvailable}
-            />
-          </div>
-        )}
-
-        {activeTab === 'revenue' && (
-          <div className="space-y-6">
-            <RevenueCalculator
-              house={selectedHouse}
-              decision={decision}
-              onUpdateHouseCosts={(updates) => handleUpdateHouse(selectedHouse.id, updates)}
-              onApplyPrice={handleApplyPriceChange}
-            />
-            <PromotionPlanner
-              house={selectedHouse}
-              promotions={decision.recommendedPromotions}
-              effectiveFloorPrice={decision.effectiveFloorPrice}
-              onApplyPromotion={handleApplyPromotion}
-              onSendReminderToPM={(promo) => handleSendReminderToPM(promo)}
-            />
-          </div>
-        )}
-
-        {activeTab === 'rules' && (
-          <div className="space-y-6">
-            <RuleEngineCard
-              house={selectedHouse}
-              rules={rules}
-              onToggleRule={(id) => {
-                invalidateAiOverride();
-                setRules((prev) =>
-                  prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)),
-                );
-              }}
-              onUpdateParam={(id, val) => {
-                invalidateAiOverride();
-                setRules((prev) =>
-                  prev.map((r) => (r.id === id ? { ...r, parameterValue: val } : r)),
-                );
-              }}
-              onUpdateHouse={(updates) => handleUpdateHouse(selectedHouse.id, updates)}
-            />
-            <NotificationCenter
-              logs={logs}
-              decision={decision}
-              house={selectedHouse}
-              onSendCustomNotification={(ch, text) =>
-                void handleSendCustomNotification(ch, text)
-              }
-            />
-          </div>
+            {activeTab === 'rules' && (
+              <div className="space-y-6">
+                <RuleEngineCard
+                  house={selectedHouse}
+                  rules={rules}
+                  onToggleRule={(id) => {
+                    invalidateAiOverride();
+                    setRules((prev) =>
+                      prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)),
+                    );
+                  }}
+                  onUpdateParam={(id, val) => {
+                    invalidateAiOverride();
+                    setRules((prev) =>
+                      prev.map((r) => (r.id === id ? { ...r, parameterValue: val } : r)),
+                    );
+                  }}
+                  onUpdateHouse={(updates) => handleUpdateHouse(selectedHouse.id, updates)}
+                />
+                <NotificationCenter
+                  logs={logs}
+                  decision={decision}
+                  house={selectedHouse}
+                  onSendCustomNotification={(ch, text) =>
+                    void handleSendCustomNotification(ch, text)
+                  }
+                />
+              </div>
+            )}
+          </>
         )}
       </main>
 
@@ -590,7 +641,7 @@ export default function App() {
       )}
 
       <footer className="mt-10 border-t border-moisha-border bg-white py-5 text-center text-xs text-moisha-muted">
-        Moisha Pocket Advisor · Neighborhood Rental Pricing, Floor Guardrails & Profit Calculator
+        Moisha Pocket Advisor · Neighborhood Rental Pricing, Floor Guardrails &amp; Profit Calculator
       </footer>
     </div>
   );

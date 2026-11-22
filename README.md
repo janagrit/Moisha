@@ -14,7 +14,7 @@ Moisha helps short-term rental hosts and property managers decide what to charge
 
 *(These instructions are also built directly into the web app via the top **How to Use** button and first-visit banner.)*
 
-1. **Pick or Add Your Property:** Open the app and click one of the sample houses to explore, or click **`+ Add Property`** (or **`Edit`**) to enter your own street address, current nightly rate, minimum **Safety Floor** price, and unbooked check-in/check-out dates.
+1. **Enter Your Property Address:** Open the app, type your street address, city, or ZIP code into **Enter Your Rental Property Address**, set your bedrooms, current nightly rate, minimum **Safety Floor** price, and empty nights, and click **`Check Address`**.
 2. **Enter Nearby Neighbor Prices:** Go to the **`Comps & Submarket`** tab and click **`+ Add Neighbor`** to enter 2–4 similar Airbnb listings nearby (their nightly price and whether they are *Vacant* or *Booked*).
 3. **Review Moisha's Verdict & Real Profit:** Check **`Verdict & Copilot`** to see whether to **drop**, **raise**, or **hold** your rate—then open **`Profit & Promotions`** to test any nightly price on the slider and verify exact net profit after cleaning & platform fees.
 4. **Ask Moisha or Share the Plan:** Type any question in the **Ask Uncle Moisha** chat box, or click **`Copy Plan`** / **`Share via WhatsApp`** (under *Rules & Alerts*) to send the recommendation straight to your host or property manager.

@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parse } from 'csv-parse/sync';
 import { computeQuantile } from '../services/pricingEngine';
-import { INITIAL_HOUSES } from '../constants';
 
 interface RawCsvRow {
   price?: string;
@@ -21,18 +20,16 @@ function main(): void {
   const csvArg = process.argv[2];
 
   if (!csvArg || csvArg === '--demo') {
-    const summary = INITIAL_HOUSES.map((house) => {
-      const sorted = house.comps.map((c) => c.currentPrice).sort((a, b) => a - b);
-      return {
-        property: house.nickname,
-        neighborhood: house.neighborhood,
-        compsCount: sorted.length,
-        p25: computeQuantile(sorted, 0.25),
-        median: computeQuantile(sorted, 0.5),
-        p75: computeQuantile(sorted, 0.75),
-      };
-    });
-    console.log(JSON.stringify({ source: 'demo-portfolio', baselines: summary }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          usage: 'npm run build-baseline -- <path-to-listings.csv>',
+          note: 'Pass an Airbnb / rental CSV with a "price" column to compute p25, median, and p75 nightly rates.',
+        },
+        null,
+        2,
+      ),
+    );
     return;
   }
 

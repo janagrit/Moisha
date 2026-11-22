@@ -9,12 +9,12 @@ import {
   AiSettings,
   AiSettingsSchema,
 } from '../types';
-import { createInitialHouses, INITIAL_RULES, DEFAULT_AI_SETTINGS } from '../constants';
+import { INITIAL_RULES, DEFAULT_AI_SETTINGS } from '../constants';
 
-const STORAGE_KEY = 'moisha_pocket_state_v2';
+const STORAGE_KEY = 'moisha_pocket_state_v3';
 
 const PersistedStateSchema = z.object({
-  houses: z.array(PropertyHouseSchema).min(1),
+  houses: z.array(PropertyHouseSchema),
   selectedHouseId: z.string(),
   rules: z.array(PricingRuleSchema).min(1),
   logs: z.array(NotificationLogSchema),
@@ -24,23 +24,11 @@ const PersistedStateSchema = z.object({
 export type PersistedState = z.infer<typeof PersistedStateSchema>;
 
 export function buildDefaultState(): PersistedState {
-  const houses = createInitialHouses();
   return {
-    houses,
-    selectedHouseId: houses[0].id,
+    houses: [],
+    selectedHouseId: '',
     rules: INITIAL_RULES.map((r) => ({ ...r })),
-    logs: [
-      {
-        id: 'log-seed-1',
-        timestamp: '08:00 AM',
-        channel: 'telegram',
-        recipient: `${houses[0].propertyManagerName}`,
-        propertyNickname: houses[0].nickname,
-        message: `Morning Sentinel: ${houses[0].nickname} has ${houses[0].unbookedDaysCount} empty nights (${houses[0].unbookedStartDate.slice(5)}–${houses[0].unbookedEndDate.slice(5)}). Direct neighbor dropped to $215/nt.`,
-        delivered: true,
-        status: 'sent',
-      },
-    ],
+    logs: [],
     aiSettings: { ...DEFAULT_AI_SETTINGS },
   };
 }
@@ -52,6 +40,9 @@ export function loadPersistedState(): PersistedState {
     const parsed = PersistedStateSchema.safeParse(JSON.parse(raw));
     if (!parsed.success) {
       return buildDefaultState();
+    }
+    if (parsed.data.houses.length === 0) {
+      return { ...parsed.data, selectedHouseId: '' };
     }
     const exists = parsed.data.houses.some((h) => h.id === parsed.data.selectedHouseId);
     return {

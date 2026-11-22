@@ -172,7 +172,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-moisha-red hover:bg-moisha-blush"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              <span>Reset Demo Data</span>
+              <span>Clear Saved Data</span>
             </button>
 
             <div className="flex items-center gap-2">

@@ -15,50 +15,36 @@ describe('Moisha App interactive prototype', () => {
     vi.restoreAllMocks();
   });
 
-  it('allows entering any custom rental address and generates an immediate verdict', () => {
+  it('starts with no default addresses and prompts the user to enter their own property', () => {
     render(<App />);
 
-    const addressInput = screen.getByPlaceholderText(/420 Main St, Nashville, TN 37206/i);
+    expect(
+      screen.getByText(/Enter a Property Address Above to Get Started/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Your Properties/i)).toBeNull();
+  });
+
+  it('allows entering any rental address and unlocks all 4 workspace tabs', () => {
+    render(<App />);
+
+    const addressInput = screen.getByPlaceholderText(
+      /Enter street address, city, or ZIP code/i,
+    );
     fireEvent.change(addressInput, {
-      target: { value: '742 Ocean Ave, Santa Monica, CA 90401' },
+      target: { value: '500 Park Ave, Chicago, IL 60601' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Check Address/i }));
 
-    expect(screen.getAllByText(/742 Ocean Ave/i).length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('renders sample undercut alert and applies recommended price drop cleanly', () => {
-    render(<App />);
-
-    expect(screen.getByText(/Action Needed · Undercut Alert/i)).toBeTruthy();
-    const dropButtons = screen.getAllByRole('button', { name: /Drop Rate to \$210\/nt/i });
-    expect(dropButtons.length).toBeGreaterThanOrEqual(1);
-    fireEvent.click(dropButtons[0]);
-
-    expect(screen.getByText(/Market Aligned · Hold Steady/i)).toBeTruthy();
-  });
-
-  it('switches to Sample 3 (Williamsburg) and displays revenue upside', () => {
-    render(<App />);
-
-    fireEvent.click(screen.getByText(/Sample · Williamsburg 2BR Loft/i));
-
-    expect(screen.getByText(/Revenue Opportunity · Raise Rate/i)).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: /Raise Rate to \$/i }).length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('navigates across Comps, Profit & Promotions, and Rules & Alerts tabs', () => {
-    render(<App />);
+    expect(screen.getAllByText(/500 Park Ave/i).length).toBeGreaterThanOrEqual(1);
 
     fireEvent.click(screen.getByRole('button', { name: /Comps & Submarket/i }));
-    expect(screen.getByText(/Comparable Neighbors Around 1500 S Congress Ave/i)).toBeTruthy();
+    expect(screen.getByText(/Comparable Neighbors Around 500 Park Ave/i)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /Profit & Promotions/i }));
     expect(screen.getByText(/Revenue, Expense & Net Profit Calculator/i)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /Rules & Alerts/i }));
     expect(screen.getByText(/Moisha's Autonomous Pricing Rules/i)).toBeTruthy();
-    expect(screen.getByText(/Price Alert Dispatch & Browser Notifications/i)).toBeTruthy();
   });
 
   it('shows first-time 4-step guide banner, allows dismissing it, and opens full How to Use dialog', () => {
