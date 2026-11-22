@@ -122,6 +122,7 @@ describe('Moisha deterministic pricing engine', () => {
       isBooked: fc.boolean(),
       distanceMiles: fc.double({ min: 0.01, max: 2.0, noNaN: true }),
       superhost: fc.boolean(),
+      isVerified: fc.boolean(),
       priceHistory: fc.constant([{ date: 'Today', price: 200 }] as { date: string; price: number }[]),
     });
 
@@ -214,7 +215,7 @@ describe('Portfolio localStorage persistence', () => {
     expect(reloaded.houses).toHaveLength(1);
     expect(reloaded.houses[0].address).toBe('100 Main St');
 
-    window.localStorage.setItem('moisha_pocket_state_v3', '{not-valid-json');
+    window.localStorage.setItem('moisha_pocket_state_v4', '{not-valid-json');
     const recovered = loadPersistedState();
     expect(recovered.houses).toHaveLength(0);
 

@@ -58,7 +58,9 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
       isBooked: false,
       distanceMiles: 0.12,
       superhost: true,
-      priceHistory: [{ date: 'Today', price: priceNum }],
+      isVerified: true,
+      verifiedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      priceHistory: [{ date: 'Verified Today', price: priceNum }],
     });
 
     setNewName('');
@@ -129,12 +131,23 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
               >
                 <div>
                   <div className="mb-1.5 flex items-start justify-between gap-2">
-                    <h4
-                      className="line-clamp-1 text-base font-bold text-moisha-navy"
-                      title={comp.name}
-                    >
-                      {comp.name}
-                    </h4>
+                    <div>
+                      <span
+                        className={`mb-1 inline-block rounded px-2 py-0.5 text-xs font-bold ${
+                          comp.isVerified
+                            ? 'bg-moisha-mint text-moisha-green'
+                            : 'bg-moisha-butter text-moisha-amber'
+                        }`}
+                      >
+                        {comp.isVerified ? '✓ Host Verified' : '⚠️ Regional Estimate'}
+                      </span>
+                      <h4
+                        className="line-clamp-1 text-base font-bold text-moisha-navy"
+                        title={comp.name}
+                      >
+                        {comp.name}
+                      </h4>
+                    </div>
                     <button
                       type="button"
                       onClick={() => onDeleteComp(comp.id)}

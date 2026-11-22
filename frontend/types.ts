@@ -46,6 +46,8 @@ export const ListingCompSchema = z.object({
   isBooked: z.boolean(),
   distanceMiles: z.number().min(0),
   superhost: z.boolean(),
+  isVerified: z.boolean().default(false),
+  verifiedAt: z.string().optional(),
   priceHistory: z.array(PricePointSchema),
 });
 
@@ -72,6 +74,8 @@ export const PropertyHouseSchema = z.object({
   address: z.string().min(1),
   neighborhood: z.string(),
   zipCode: z.string(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
   bedrooms: z.number().int().min(0),
   bathrooms: z.number().min(0),
   currentPrice: z.number().positive(),
@@ -145,6 +149,7 @@ export interface RevenueScenario {
 
 export interface CompetitorSummary {
   totalComps: number;
+  verifiedCompsCount: number;
   vacantComps: number;
   bookedComps: number;
   avgVacantPrice: number;
@@ -153,6 +158,8 @@ export interface CompetitorSummary {
   upperRangePrice: number;
   cheapestNeighborPrice: number;
   cheapestNeighborName: string;
+  cheapestNeighborUrl: string;
+  cheapestNeighborVerified: boolean;
   undercuttingCompsCount: number;
 }
 

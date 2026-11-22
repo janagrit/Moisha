@@ -11,7 +11,7 @@ import {
 } from '../types';
 import { INITIAL_RULES, DEFAULT_AI_SETTINGS } from '../constants';
 
-const STORAGE_KEY = 'moisha_pocket_state_v3';
+const STORAGE_KEY = 'moisha_pocket_state_v4';
 
 const PersistedStateSchema = z.object({
   houses: z.array(PropertyHouseSchema),

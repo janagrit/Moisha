@@ -5,8 +5,8 @@ import App from '../App';
 describe('Moisha App interactive prototype', () => {
   beforeEach(() => {
     window.localStorage.clear();
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ available: false }), { status: 200 }),
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      new Response(JSON.stringify([]), { status: 200 }),
     );
   });
 
@@ -24,7 +24,7 @@ describe('Moisha App interactive prototype', () => {
     expect(screen.queryByText(/Your Properties/i)).toBeNull();
   });
 
-  it('allows entering any rental address and unlocks all 4 workspace tabs', () => {
+  it('allows entering any rental address and unlocks all 4 workspace tabs', async () => {
     render(<App />);
 
     const addressInput = screen.getByPlaceholderText(
@@ -35,7 +35,9 @@ describe('Moisha App interactive prototype', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /Check Address/i }));
 
-    expect(screen.getAllByText(/500 Park Ave/i).length).toBeGreaterThanOrEqual(1);
+    expect((await screen.findAllByText(/500 Park Ave/i)).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('button', { name: /Download Proof Report/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Download CSV/i })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /Comps & Submarket/i }));
     expect(screen.getByText(/Comparable Neighbors Around 500 Park Ave/i)).toBeTruthy();

@@ -238,12 +238,17 @@ export default function App() {
     invalidateAiOverride();
     const created: ListingComp = {
       ...newComp,
-      id: `comp-${Date.now()}`,
+      id: `comp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     };
     setHouses((prev) =>
-      prev.map((h) =>
-        h.id === selectedHouse.id ? { ...h, comps: [...h.comps, created] } : h,
-      ),
+      prev.map((h) => {
+        if (h.id !== selectedHouse.id) return h;
+        // When user logs a verified comp, drop unverified regional placeholder estimates so only verified comps remain!
+        const existingToKeep = created.isVerified
+          ? h.comps.filter((c) => c.isVerified)
+          : h.comps;
+        return { ...h, comps: [...existingToKeep, created] };
+      }),
     );
   };
 
@@ -519,6 +524,7 @@ export default function App() {
                   onApplyPriceChange={handleApplyPriceChange}
                   onApplyPromotion={(promo) => handleApplyPromotion(promo)}
                   onDispatchReminder={() => handleSendReminderToPM()}
+                  onLogVerifiedComp={handleAddComp}
                 />
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

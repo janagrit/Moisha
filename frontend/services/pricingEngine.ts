@@ -37,10 +37,14 @@ export function getEffectiveFloorPrice(house: PropertyHouse, rules: PricingRule[
 }
 
 export function summarizeCompetitors(house: PropertyHouse): CompetitorSummary {
-  const comps = house.comps;
+  const verifiedOnly = house.comps.filter((c) => c.isVerified);
+  // Once the user logs 1+ verified real comps, compute benchmarks strictly from verified comps!
+  const comps = verifiedOnly.length > 0 ? verifiedOnly : house.comps;
+
   if (comps.length === 0) {
     return {
       totalComps: 0,
+      verifiedCompsCount: 0,
       vacantComps: 0,
       bookedComps: 0,
       avgVacantPrice: house.currentPrice,
@@ -48,7 +52,9 @@ export function summarizeCompetitors(house: PropertyHouse): CompetitorSummary {
       lowerRangePrice: Math.round(house.currentPrice * 0.9),
       upperRangePrice: Math.round(house.currentPrice * 1.1),
       cheapestNeighborPrice: house.currentPrice,
-      cheapestNeighborName: 'No neighbors tracked yet',
+      cheapestNeighborName: 'No comps logged yet',
+      cheapestNeighborUrl: 'https://www.airbnb.com',
+      cheapestNeighborVerified: false,
       undercuttingCompsCount: 0,
     };
   }
@@ -71,6 +77,7 @@ export function summarizeCompetitors(house: PropertyHouse): CompetitorSummary {
 
   return {
     totalComps: comps.length,
+    verifiedCompsCount: verifiedOnly.length,
     vacantComps: vacant.length,
     bookedComps: booked.length,
     avgVacantPrice,
@@ -78,7 +85,11 @@ export function summarizeCompetitors(house: PropertyHouse): CompetitorSummary {
     lowerRangePrice: computeQuantile(allSorted, 0.25),
     upperRangePrice: computeQuantile(allSorted, 0.75),
     cheapestNeighborPrice: cheapest.currentPrice,
-    cheapestNeighborName: cheapest.address || cheapest.name,
+    cheapestNeighborName: cheapest.isVerified
+      ? cheapest.address || cheapest.name
+      : 'Regional Baseline Estimate (Unverified)',
+    cheapestNeighborUrl: cheapest.airbnbUrl,
+    cheapestNeighborVerified: Boolean(cheapest.isVerified),
     undercuttingCompsCount: vacant.filter((c) => c.currentPrice < house.currentPrice).length,
   };
 }
@@ -280,9 +291,15 @@ export function evaluatePropertyPricing(
           : isNeighborUndercutting
             ? 'Direct Neighbor Undercut Threshold'
             : `${nights}-Night Orphan Gap Watch`;
-      headline = `${nights} Empty Nights at ${house.nickname} · Neighbor Is $${house.currentPrice - summary.cheapestNeighborPrice}/nt Cheaper`;
-      reasoning = `Oy vey, ${house.propertyManagerName}! Leaving ${nights} nights empty at ${house.nickname} (${house.unbookedStartDate.slice(5)} to ${house.unbookedEndDate.slice(5)}) puts $${house.currentPrice * nights} of gross room revenue at risk. ${summary.cheapestNeighborName} dropped to $${summary.cheapestNeighborPrice}/night while you're asking $${house.currentPrice}. Adjust to $${rawTarget}/night${rawTarget === effectiveFloor ? ' (your safety floor)' : ''} or activate a promotion badge so guests book you first!`;
-      neighborGapAnalysis = `${summary.undercuttingCompsCount} of ${summary.vacantComps} vacant comps around ${house.neighborhood} are undercutting your $${house.currentPrice}/nt rate (cheapest: $${summary.cheapestNeighborPrice}/nt at ${summary.cheapestNeighborName}).`;
+      headline = summary.cheapestNeighborVerified
+        ? `${nights} Empty Nights at ${house.nickname} · Verified Comp Is $${house.currentPrice - summary.cheapestNeighborPrice}/nt Cheaper`
+        : `${nights} Empty Nights at ${house.nickname} · Above $${summary.cheapestNeighborPrice}/nt Submarket Estimate`;
+      reasoning = summary.cheapestNeighborVerified
+        ? `Oy vey, ${house.propertyManagerName}! Leaving ${nights} nights empty at ${house.nickname} (${house.unbookedStartDate.slice(5)} to ${house.unbookedEndDate.slice(5)}) puts $${house.currentPrice * nights} of gross room revenue at risk. Verified comp (${summary.cheapestNeighborName}) is listed at $${summary.cheapestNeighborPrice}/night while you're asking $${house.currentPrice}. Adjust to $${rawTarget}/night${rawTarget === effectiveFloor ? ' (your safety floor)' : ''} or activate a promotion badge!`
+        : `Heads up: ${house.nickname} has ${nights} empty nights (${house.unbookedStartDate.slice(5)} to ${house.unbookedEndDate.slice(5)}, $${house.currentPrice * nights} gross window). Based on our initial ${house.neighborhood} ${house.bedrooms}BR statistical baseline ($${summary.lowerRangePrice}–$${summary.upperRangePrice}/nt), your $${house.currentPrice}/nt rate sits above the $${summary.cheapestNeighborPrice}/nt lower quartile. Click "Open Airbnb Map" below to log 2–3 real neighbor prices on your street and lock in verified proof!`;
+      neighborGapAnalysis = summary.cheapestNeighborVerified
+        ? `${summary.undercuttingCompsCount} of ${summary.vacantComps} verified vacant comps are undercutting your $${house.currentPrice}/nt rate (cheapest: $${summary.cheapestNeighborPrice}/nt at ${summary.cheapestNeighborName}).`
+        : `Using unverified ${house.neighborhood} ${house.bedrooms}BR statistical estimate ($${summary.lowerRangePrice} P25 / $${summary.medianCompPrice} median / $${summary.upperRangePrice} P75). Log real street listings below to replace estimates with verified proof.`;
     } else {
       // Already at or below floor price!
       status = 'OK';

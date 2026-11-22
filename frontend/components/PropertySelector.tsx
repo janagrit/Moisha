@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Home, MapPin, AlertCircle, Sparkles, Edit3, Trash2, X, Search } from 'lucide-react';
+import { Home, MapPin, AlertCircle, Sparkles, Edit3, Trash2, X, Search, Loader2 } from 'lucide-react';
 import { PropertyHouse } from '../types';
 import { daysBetweenIso } from '../services/pricingEngine';
-import { buildPropertyFromAnyAddress } from '../services/addressService';
+import {
+  buildPropertyFromAnyAddress,
+  geocodeAddressWithNominatim,
+} from '../services/addressService';
 
 interface PropertySelectorProps {
   houses: PropertyHouse[];
@@ -26,6 +29,7 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
   const [quickRate, setQuickRate] = useState('245');
   const [quickFloor, setQuickFloor] = useState('175');
   const [quickNights, setQuickNights] = useState('4');
+  const [isLocating, setIsLocating] = useState(false);
 
   const [editingHouse, setEditingHouse] = useState<PropertyHouse | null>(null);
   const [editNickname, setEditNickname] = useState('');
@@ -49,20 +53,28 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [editingHouse]);
 
-  const handleQuickAddressSubmit = (e: React.FormEvent) => {
+  const handleQuickAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!quickAddress.trim()) return;
+    const trimmed = quickAddress.trim();
+    if (!trimmed || isLocating) return;
 
-    const created = buildPropertyFromAnyAddress({
-      rawAddress: quickAddress,
-      bedrooms: Number(quickBeds) || 2,
-      currentPrice: Number(quickRate) || 245,
-      floorPrice: Number(quickFloor) || 175,
-      unbookedNights: Number(quickNights) || 4,
-    });
+    setIsLocating(true);
+    try {
+      const geocoded = await geocodeAddressWithNominatim(trimmed);
+      const created = buildPropertyFromAnyAddress({
+        rawAddress: trimmed,
+        bedrooms: Number(quickBeds) || 2,
+        currentPrice: Number(quickRate) || 245,
+        floorPrice: Number(quickFloor) || 175,
+        unbookedNights: Number(quickNights) || 4,
+        geocoded,
+      });
 
-    onAddHouse(created);
-    setQuickAddress('');
+      onAddHouse(created);
+      setQuickAddress('');
+    } finally {
+      setIsLocating(false);
+    }
   };
 
   const openEditModal = (house: PropertyHouse) => {
@@ -115,7 +127,7 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
           </span>
         </div>
 
-        <form onSubmit={handleQuickAddressSubmit} className="space-y-4">
+        <form onSubmit={(e) => void handleQuickAddressSubmit(e)} className="space-y-4">
           <label className="block">
             <span className="label">Street Address, City, or ZIP Code *</span>
             <input
@@ -179,9 +191,17 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
             <div className="col-span-2 flex items-end sm:col-span-1">
               <button
                 type="submit"
-                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-moisha-royal px-5 text-base font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
+                disabled={isLocating}
+                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-moisha-royal px-5 text-base font-bold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60"
               >
-                <span>Check Address</span>
+                {isLocating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Locating...</span>
+                  </>
+                ) : (
+                  <span>Check Address</span>
+                )}
               </button>
             </div>
           </div>
