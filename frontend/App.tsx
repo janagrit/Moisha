@@ -460,13 +460,13 @@ export default function App() {
             aria-label="Empty portfolio state"
             className="card border-dashed border-moisha-border bg-white/80 p-8 text-center sm:p-12"
           >
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-moisha-sky text-moisha-royal">
-              <MapPin className="h-6 w-6" />
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-moisha-sky text-moisha-royal">
+              <MapPin className="h-7 w-7" />
             </div>
-            <h2 className="text-lg font-extrabold text-moisha-navy">
+            <h2 className="text-xl font-extrabold text-moisha-navy sm:text-2xl">
               Enter a Property Address Above to Get Started
             </h2>
-            <p className="mx-auto mt-1.5 max-w-lg text-xs leading-relaxed text-moisha-muted">
+            <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-moisha-muted sm:text-base">
               Type any street address, city, or ZIP code, enter your current nightly rate and minimum floor price, and click{' '}
               <strong>Check Address</strong> to see Moisha&apos;s neighborhood rate benchmark, net profit breakdown, and promotion options.
             </p>
@@ -475,7 +475,7 @@ export default function App() {
           <>
             <nav
               aria-label="Workspace sections"
-              className="flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-moisha-border bg-white p-1.5 shadow-sm"
+              className="flex items-center gap-2 overflow-x-auto rounded-2xl border border-moisha-border bg-white p-2 shadow-sm"
             >
               {tabs.map((tab) => {
                 const isCurrent = activeTab === tab.id;
@@ -485,7 +485,7 @@ export default function App() {
                     type="button"
                     aria-current={isCurrent ? 'page' : undefined}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition-all sm:text-base ${
                       isCurrent
                         ? 'bg-moisha-navy text-white shadow-sm'
                         : 'text-moisha-muted hover:bg-moisha-sand hover:text-moisha-navy'
@@ -495,7 +495,7 @@ export default function App() {
                     <span>{tab.label}</span>
                     {tab.badge && (
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
                           isCurrent
                             ? 'bg-white/20 text-white'
                             : tab.badge === 'Alert'
@@ -640,7 +640,7 @@ export default function App() {
         />
       )}
 
-      <footer className="mt-10 border-t border-moisha-border bg-white py-5 text-center text-xs text-moisha-muted">
+      <footer className="mt-10 border-t border-moisha-border bg-white py-6 text-center text-sm text-moisha-muted">
         Moisha Pocket Advisor · Neighborhood Rental Pricing, Floor Guardrails &amp; Profit Calculator
       </footer>
     </div>

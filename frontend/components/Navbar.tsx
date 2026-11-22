@@ -45,26 +45,25 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 border-b border-moisha-border bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-18 max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8">
-        {/* Brand */}
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3.5 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-center gap-3.5">
           <img
             src="./moisha-logo.png"
             alt="Moisha"
-            width={48}
-            height={48}
-            className="h-11 w-11 shrink-0 rounded-full border border-moisha-border object-cover select-none sm:h-12 sm:w-12"
+            width={52}
+            height={52}
+            className="h-12 w-12 shrink-0 rounded-full border border-moisha-border object-cover select-none sm:h-13 sm:w-13"
           />
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-extrabold tracking-tight text-moisha-navy sm:text-xl">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl font-extrabold tracking-tight text-moisha-navy sm:text-2xl">
                 MOISHA
               </span>
-              <span className="hidden rounded-full border border-amber-300 bg-moisha-butter px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-moisha-amber uppercase sm:inline-block">
+              <span className="hidden rounded-full border border-amber-300 bg-moisha-butter px-3 py-0.5 text-xs font-bold tracking-wide text-moisha-amber uppercase sm:inline-block">
                 Pocket Advisor
               </span>
             </div>
-            <p className="truncate text-xs text-moisha-muted">
+            <p className="truncate text-sm text-moisha-muted">
               {selectedHouse
                 ? `${selectedHouse.nickname} · ${selectedHouse.neighborhood}`
                 : 'Short-term rental pricing & profit advisor'}
@@ -72,8 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Center Status Pill */}
-        <div className="hidden items-center gap-3 rounded-2xl border border-moisha-border bg-moisha-sand px-3.5 py-2 text-xs xl:flex">
+        <div className="hidden items-center gap-3 rounded-2xl border border-moisha-border bg-moisha-sand px-4 py-2 text-sm xl:flex">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
               {selectedHouse && (
@@ -87,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <span className="text-moisha-border">|</span>
           <span
-            className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+            className={`rounded-md px-2.5 py-0.5 text-xs font-semibold ${
               aiActive
                 ? 'bg-moisha-sky text-moisha-royal'
                 : 'border border-moisha-border bg-white text-moisha-muted'
@@ -97,10 +95,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </div>
 
-        {/* Right Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {selectedHouse && lastScannedTime && (
-            <span className="hidden rounded-lg border border-moisha-border bg-moisha-sand px-2.5 py-1.5 text-xs font-medium text-moisha-muted 2xl:inline-block">
+            <span className="hidden rounded-lg border border-moisha-border bg-moisha-sand px-3 py-1.5 text-sm font-medium text-moisha-muted 2xl:inline-block">
               Updated {lastScannedTime}
             </span>
           )}
@@ -108,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={onOpenGuide}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-moisha-border bg-moisha-sand px-3 text-xs font-bold text-moisha-navy transition-colors hover:bg-white"
+            className="inline-flex h-11 items-center gap-2 rounded-xl border border-moisha-border bg-moisha-sand px-3.5 text-sm font-bold text-moisha-navy transition-colors hover:bg-white"
           >
             <CircleHelp className="h-4 w-4 text-moisha-royal" />
             <span className="hidden sm:inline">How to Use</span>
@@ -119,9 +116,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={onOpenSettings}
             aria-label="Open settings"
             title="AI & App Settings"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-moisha-border bg-white text-moisha-navy transition-colors hover:bg-moisha-sand"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-moisha-border bg-white text-moisha-navy transition-colors hover:bg-moisha-sand"
           >
-            <Settings className="h-4 w-4" />
+            <Settings className="h-5 w-5" />
           </button>
 
           {selectedHouse && (
@@ -129,7 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               onClick={onTriggerScan}
               disabled={isScanning}
-              className={`inline-flex h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-all sm:px-4 sm:text-sm ${
+              className={`inline-flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-bold transition-all sm:px-5 sm:text-base ${
                 isScanning
                   ? 'cursor-not-allowed border border-moisha-border bg-moisha-sand text-moisha-muted'
                   : 'bg-moisha-navy text-white shadow-sm hover:bg-blue-950 active:scale-[0.98]'
@@ -142,7 +139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </>
               ) : (
                 <>
-                  <Play className="h-3.5 w-3.5 fill-current text-amber-300" />
+                  <Play className="h-4 w-4 fill-current text-amber-300" />
                   <span>Consult Moisha</span>
                 </>
               )}

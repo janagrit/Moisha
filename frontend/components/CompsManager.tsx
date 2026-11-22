@@ -71,47 +71,47 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
     <section aria-label="Comparable neighbor listings" className="card p-6">
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-moisha-navy">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h3 className="text-lg font-bold text-moisha-navy sm:text-xl">
               Comparable Neighbors Around {house.address.split(',')[0]}
             </h3>
-            <span className="rounded-full border border-moisha-border bg-moisha-sand px-2.5 py-0.5 text-xs font-bold text-moisha-navy">
+            <span className="rounded-full border border-moisha-border bg-moisha-sand px-3 py-0.5 text-xs font-bold text-moisha-navy">
               {comps.length} tracked
             </span>
           </div>
-          <p className="mt-0.5 text-xs text-moisha-muted">
+          <p className="mt-1 text-sm text-moisha-muted">
             {house.neighborhood} ({house.zipCode}) · Adjust any comp price or status to see Moisha recalculate live.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             type="button"
             onClick={onSimulateNeighborUndercut}
             disabled={comps.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-moisha-butter px-3 py-2 text-xs font-bold text-moisha-amber transition-colors hover:bg-amber-200/70 disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-moisha-butter px-3.5 py-2.5 text-sm font-bold text-moisha-amber transition-colors hover:bg-amber-200/70 disabled:opacity-40"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
+            <RefreshCw className="h-4 w-4" />
             <span>Simulate Neighbor Drop (-$25)</span>
           </button>
 
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-moisha-navy px-3.5 py-2 text-xs font-bold text-white transition-colors hover:bg-blue-950"
+            className="inline-flex items-center gap-2 rounded-xl bg-moisha-navy px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-950"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-4 w-4" />
             <span>Add Neighbor</span>
           </button>
         </div>
       </div>
 
       {comps.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-moisha-border bg-moisha-sand p-8 text-center text-xs text-moisha-muted">
+        <div className="rounded-2xl border border-dashed border-moisha-border bg-moisha-sand p-8 text-center text-sm text-moisha-muted">
           No comparable listings tracked yet. Click <strong>Add Neighbor</strong> to benchmark your nightly rate.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {comps.map((comp) => {
             const deltaVsMe = comp.currentPrice - myPrice;
             const isUndercutting = !comp.isBooked && deltaVsMe < 0;
@@ -119,7 +119,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
             return (
               <div
                 key={comp.id}
-                className={`flex flex-col justify-between rounded-2xl border p-4 transition-all ${
+                className={`flex flex-col justify-between rounded-2xl border p-5 transition-all ${
                   comp.isBooked
                     ? 'border-moisha-border bg-moisha-sand/50 opacity-85'
                     : isUndercutting
@@ -130,7 +130,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                 <div>
                   <div className="mb-1.5 flex items-start justify-between gap-2">
                     <h4
-                      className="line-clamp-1 text-sm font-bold text-moisha-navy"
+                      className="line-clamp-1 text-base font-bold text-moisha-navy"
                       title={comp.name}
                     >
                       {comp.name}
@@ -141,33 +141,33 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                       aria-label={`Remove ${comp.name}`}
                       className="shrink-0 rounded p-1 text-moisha-muted hover:text-moisha-red"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
 
                   {comp.address && (
-                    <div className="mb-2 flex items-center gap-1 text-[11px] text-moisha-muted">
-                      <MapPin className="h-3 w-3 shrink-0 text-moisha-amber" />
+                    <div className="mb-2 flex items-center gap-1.5 text-xs text-moisha-muted sm:text-sm">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-moisha-amber" />
                       <span className="truncate">{comp.address}</span>
                     </div>
                   )}
 
-                  <div className="mb-2 text-[11px] text-moisha-muted">
+                  <div className="mb-2 text-xs text-moisha-muted sm:text-sm">
                     {comp.bedrooms} BR · {comp.bathrooms} BA · {comp.distanceMiles} mi
                   </div>
 
-                  <div className="my-2 flex items-center justify-between border-y border-moisha-border py-1.5 text-xs">
+                  <div className="my-2.5 flex items-center justify-between border-y border-moisha-border py-2 text-sm">
                     <div className="flex items-center gap-1">
-                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />
+                      <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
                       <span className="font-bold text-moisha-navy">{comp.rating}</span>
-                      <span className="text-[10px] text-moisha-muted">({comp.reviewsCount})</span>
+                      <span className="text-xs text-moisha-muted">({comp.reviewsCount})</span>
                     </div>
 
                     <button
                       type="button"
                       aria-pressed={comp.isBooked}
                       onClick={() => onUpdateComp(comp.id, { isBooked: !comp.isBooked })}
-                      className={`rounded-lg border px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                      className={`rounded-lg border px-2.5 py-1 text-xs font-bold transition-colors ${
                         comp.isBooked
                           ? 'border-emerald-200 bg-moisha-mint text-moisha-green'
                           : 'border-amber-300 bg-moisha-butter text-moisha-amber'
@@ -177,23 +177,23 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                     </button>
                   </div>
 
-                  <div className="my-2 flex items-center justify-between">
+                  <div className="my-2.5 flex items-center justify-between">
                     <div>
-                      <span className="block text-[10px] font-bold text-moisha-muted uppercase">
+                      <span className="block text-xs font-bold text-moisha-muted uppercase">
                         Rate
                       </span>
-                      <span className="text-lg font-extrabold text-moisha-navy">
+                      <span className="text-2xl font-extrabold text-moisha-navy">
                         ${comp.currentPrice}
                       </span>
-                      <span className="text-[11px] text-moisha-muted">/nt</span>
+                      <span className="text-xs text-moisha-muted">/nt</span>
                     </div>
 
                     <div className="text-right">
-                      <span className="block text-[10px] font-bold text-moisha-muted uppercase">
+                      <span className="block text-xs font-bold text-moisha-muted uppercase">
                         Vs You
                       </span>
                       <span
-                        className={`text-xs font-bold ${
+                        className={`text-sm font-bold ${
                           isUndercutting
                             ? 'text-moisha-amber'
                             : deltaVsMe > 0
@@ -211,8 +211,8 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between border-t border-moisha-border pt-2">
-                  <div className="flex items-center gap-1">
+                <div className="mt-3 flex items-center justify-between border-t border-moisha-border pt-3">
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       aria-label={`Decrease ${comp.name} rate by $15`}
@@ -221,7 +221,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                           currentPrice: Math.max(95, comp.currentPrice - 15),
                         })
                       }
-                      className="rounded-md border border-moisha-border bg-white px-2 py-0.5 text-[11px] font-bold text-moisha-navy hover:bg-moisha-sand"
+                      className="rounded-lg border border-moisha-border bg-white px-2.5 py-1 text-xs font-bold text-moisha-navy hover:bg-moisha-sand sm:text-sm"
                     >
                       -$15
                     </button>
@@ -231,7 +231,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                       onClick={() =>
                         onUpdateComp(comp.id, { currentPrice: comp.currentPrice + 15 })
                       }
-                      className="rounded-md border border-moisha-border bg-white px-2 py-0.5 text-[11px] font-bold text-moisha-navy hover:bg-moisha-sand"
+                      className="rounded-lg border border-moisha-border bg-white px-2.5 py-1 text-xs font-bold text-moisha-navy hover:bg-moisha-sand sm:text-sm"
                     >
                       +$15
                     </button>
@@ -241,10 +241,10 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                     href={sanitizeExternalUrl(comp.airbnbUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-moisha-royal hover:underline"
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-moisha-royal hover:underline"
                   >
-                    <span>Listing</span>
-                    <ExternalLink className="h-3 w-3" />
+                    <span>Airbnb</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 </div>
               </div>
@@ -260,13 +260,13 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
           aria-labelledby="add-comp-dialog-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
         >
-          <div className="w-full max-w-md rounded-2xl border border-moisha-border bg-white p-6 shadow-xl">
+          <div className="w-full max-w-lg rounded-2xl border border-moisha-border bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h3 id="add-comp-dialog-title" className="text-base font-bold text-moisha-navy">
+                <h3 id="add-comp-dialog-title" className="text-lg font-bold text-moisha-navy">
                   Add Neighbor Comp
                 </h3>
-                <p className="text-xs text-moisha-muted">
+                <p className="text-sm text-moisha-muted">
                   Track a competing rental near {house.nickname}.
                 </p>
               </div>
@@ -274,13 +274,13 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                 type="button"
                 onClick={() => setShowAddModal(false)}
                 aria-label="Close add comp modal"
-                className="rounded-lg p-1 text-moisha-muted hover:bg-moisha-sand"
+                className="rounded-lg p-1.5 text-moisha-muted hover:bg-moisha-sand"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="space-y-3">
+            <form onSubmit={handleCreate} className="space-y-3.5">
               <label className="block">
                 <span className="label">Listing Name *</span>
                 <input
@@ -289,7 +289,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                   placeholder="e.g. Modern 3BR Garden Suite"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="field text-sm"
+                  className="field"
                 />
               </label>
 
@@ -300,7 +300,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                   placeholder="e.g. 2 doors down"
                   value={newAddress}
                   onChange={(e) => setNewAddress(e.target.value)}
-                  className="field text-sm"
+                  className="field"
                 />
               </label>
 
@@ -311,7 +311,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                   placeholder="https://www.airbnb.com/rooms/..."
                   value={newUrl}
                   onChange={(e) => setNewUrl(e.target.value)}
-                  className="field text-sm"
+                  className="field"
                 />
               </label>
 
@@ -323,7 +323,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                     min={50}
                     value={newPrice}
                     onChange={(e) => setNewPrice(e.target.value)}
-                    className="field text-sm"
+                    className="field"
                   />
                 </label>
                 <label className="block">
@@ -333,7 +333,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                     min={0}
                     value={newBeds}
                     onChange={(e) => setNewBeds(e.target.value)}
-                    className="field text-sm"
+                    className="field"
                   />
                 </label>
                 <label className="block">
@@ -345,20 +345,20 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                     max={5}
                     value={newRating}
                     onChange={(e) => setNewRating(e.target.value)}
-                    className="field text-sm"
+                    className="field"
                   />
                 </label>
               </div>
 
-              <div className="flex justify-end gap-2 border-t border-moisha-border pt-4">
+              <div className="flex justify-end gap-2.5 border-t border-moisha-border pt-4">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="btn-quiet text-xs"
+                  className="btn-quiet"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary text-xs">
+                <button type="submit" className="btn-primary">
                   Save Neighbor
                 </button>
               </div>

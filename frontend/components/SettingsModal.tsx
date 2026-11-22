@@ -49,39 +49,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       aria-labelledby="settings-dialog-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
     >
-      <div className="w-full max-w-md rounded-2xl border border-moisha-border bg-white p-6 shadow-xl">
+      <div className="w-full max-w-lg rounded-2xl border border-moisha-border bg-white p-6 shadow-xl sm:p-7">
         <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <Sparkles className="h-5 w-5 text-moisha-royal" />
-            <h3 id="settings-dialog-title" className="text-base font-bold text-moisha-navy">
-              AI Engine & App Settings
+            <h3 id="settings-dialog-title" className="text-lg font-bold text-moisha-navy sm:text-xl">
+              AI Engine &amp; App Settings
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close settings"
-            className="rounded-lg p-1 text-moisha-muted hover:bg-moisha-sand"
+            className="rounded-lg p-1.5 text-moisha-muted hover:bg-moisha-sand"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         <form onSubmit={handleSave} className="space-y-4">
-          <div className="rounded-xl border border-moisha-border bg-moisha-sand p-3.5 text-xs">
+          <div className="rounded-xl border border-moisha-border bg-moisha-sand p-4 text-sm">
             <div className="flex items-center justify-between font-bold text-moisha-navy">
               <span>Server .env Gemini Bridge</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] ${
+                className={`rounded-full px-2.5 py-0.5 text-xs ${
                   proxyAvailable
                     ? 'bg-moisha-mint text-moisha-green'
                     : 'border border-moisha-border bg-white text-moisha-muted'
                 }`}
               >
-                {proxyAvailable ? `Connected (${proxyModel})` : 'Static / Offline Mode'}
+                {proxyAvailable ? `Connected (${proxyModel})` : 'Static / Browser Mode'}
               </span>
             </div>
-            <p className="mt-1 text-[11px] text-moisha-muted">
+            <p className="mt-1.5 text-xs leading-relaxed text-moisha-muted sm:text-sm">
               {proxyAvailable
                 ? 'Local Vite server detected GEMINI_API_KEY in .env securely without exposing it in browser bundles.'
                 : 'Running client-side deterministic pricing math. Add an optional key below to enable live Gemini calls on static hosting.'}
@@ -90,19 +90,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <div>
             <span className="label">Pricing Advisor Mode</span>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 aria-pressed={aiSettings.mode === 'auto'}
                 onClick={() => onUpdateSettings({ mode: 'auto' })}
-                className={`rounded-xl border p-2.5 text-left text-xs transition-all ${
+                className={`rounded-xl border p-3.5 text-left text-sm transition-all ${
                   aiSettings.mode === 'auto'
                     ? 'border-moisha-royal bg-moisha-sky font-bold text-moisha-royal'
                     : 'border-moisha-border bg-white text-moisha-navy'
                 }`}
               >
                 <div>Auto (Hybrid)</div>
-                <div className="mt-0.5 text-[10px] font-normal text-moisha-muted">
+                <div className="mt-0.5 text-xs font-normal text-moisha-muted">
                   Local math + Gemini AI
                 </div>
               </button>
@@ -111,14 +111,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 type="button"
                 aria-pressed={aiSettings.mode === 'local_only'}
                 onClick={() => onUpdateSettings({ mode: 'local_only' })}
-                className={`rounded-xl border p-2.5 text-left text-xs transition-all ${
+                className={`rounded-xl border p-3.5 text-left text-sm transition-all ${
                   aiSettings.mode === 'local_only'
                     ? 'border-moisha-royal bg-moisha-sky font-bold text-moisha-royal'
                     : 'border-moisha-border bg-white text-moisha-navy'
                 }`}
               >
                 <div>Local Deterministic</div>
-                <div className="mt-0.5 text-[10px] font-normal text-moisha-muted">
+                <div className="mt-0.5 text-xs font-normal text-moisha-muted">
                   100% offline engine
                 </div>
               </button>
@@ -135,15 +135,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               placeholder={proxyAvailable ? 'Using .env key via local proxy' : 'AIzaSy...'}
               value={keyInput}
               onChange={(e) => setKeyInput(e.target.value)}
-              className="field text-xs"
+              className="field text-sm"
             />
-            <p className="hint mt-1 flex items-center gap-1">
-              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-moisha-green" />
+            <p className="hint mt-1.5 flex items-center gap-1.5">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-moisha-green" />
               <span>Stored only in your browser&apos;s localStorage.</span>
             </p>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-moisha-border bg-moisha-sand/70 px-3.5 py-2.5 text-xs">
+          <div className="flex items-center justify-between rounded-xl border border-moisha-border bg-moisha-sand/70 px-4 py-3 text-sm">
             <span className="flex items-center gap-2 font-semibold text-moisha-navy">
               {aiSettings.soundEnabled ? (
                 <Volume2 className="h-4 w-4 text-moisha-royal" />
@@ -156,7 +156,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               type="button"
               aria-pressed={aiSettings.soundEnabled}
               onClick={() => onUpdateSettings({ soundEnabled: !aiSettings.soundEnabled })}
-              className="rounded-lg border border-moisha-border bg-white px-2.5 py-1 text-[11px] font-bold text-moisha-navy"
+              className="rounded-lg border border-moisha-border bg-white px-3 py-1 text-xs font-bold text-moisha-navy sm:text-sm"
             >
               {aiSettings.soundEnabled ? 'Enabled' : 'Muted'}
             </button>
@@ -169,17 +169,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onResetDemoData();
                 onClose();
               }}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-moisha-red hover:bg-moisha-blush"
+              className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-bold text-moisha-red hover:bg-moisha-blush"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <RotateCcw className="h-4 w-4" />
               <span>Clear Saved Data</span>
             </button>
 
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={onClose} className="btn-quiet text-xs">
+            <div className="flex items-center gap-2.5">
+              <button type="button" onClick={onClose} className="btn-quiet">
                 Cancel
               </button>
-              <button type="submit" className="btn-primary text-xs">
+              <button type="submit" className="btn-primary">
                 Save
               </button>
             </div>

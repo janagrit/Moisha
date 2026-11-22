@@ -4,10 +4,16 @@
 
 @layer base {
   html {
+    font-size: 16.5px;
     -webkit-text-size-adjust: 100%;
   }
+  @media (min-width: 640px) {
+    html {
+      font-size: 17.5px;
+    }
+  }
   body {
-    @apply bg-moisha-sand font-sans text-moisha-navy antialiased;
+    @apply bg-moisha-sand font-sans text-base leading-relaxed text-moisha-navy antialiased;
     min-height: 100dvh;
   }
   :focus-visible {
@@ -18,24 +24,24 @@
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-moisha-border bg-white p-4;
+    @apply rounded-2xl border border-moisha-border bg-white p-5 sm:p-6;
   }
   .btn {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold sm:text-base;
   }
   .btn-primary {
-    @apply btn bg-moisha-navy text-white;
+    @apply btn bg-moisha-navy text-white hover:bg-blue-950;
   }
   .btn-quiet {
-    @apply btn border border-moisha-border bg-white text-moisha-navy;
+    @apply btn border border-moisha-border bg-white text-moisha-navy hover:bg-moisha-sand;
   }
   .field {
-    @apply min-h-11 w-full rounded-xl border border-moisha-border bg-white px-3 text-base text-moisha-navy;
+    @apply min-h-12 w-full rounded-xl border border-moisha-border bg-white px-3.5 text-base font-medium text-moisha-navy;
   }
   .label {
-    @apply mb-1 block text-sm font-medium text-moisha-navy;
+    @apply mb-1.5 block text-sm font-bold text-moisha-navy;
   }
   .hint {
-    @apply text-xs leading-5 text-moisha-muted;
+    @apply text-sm leading-6 text-moisha-muted;
   }
 }

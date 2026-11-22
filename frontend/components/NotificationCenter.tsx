@@ -56,37 +56,37 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   };
 
   const channelButtons: Array<{ id: NotificationChannel; label: string; icon: React.ReactNode }> = [
-    { id: 'telegram', label: 'Telegram', icon: <Send className="h-3 w-3" /> },
-    { id: 'whatsapp', label: 'WhatsApp', icon: <Smartphone className="h-3 w-3" /> },
-    { id: 'twilio_sms', label: 'SMS', icon: <Smartphone className="h-3 w-3" /> },
-    { id: 'browser', label: 'Browser Push', icon: <Bell className="h-3 w-3" /> },
+    { id: 'telegram', label: 'Telegram', icon: <Send className="h-3.5 w-3.5" /> },
+    { id: 'whatsapp', label: 'WhatsApp', icon: <Smartphone className="h-3.5 w-3.5" /> },
+    { id: 'twilio_sms', label: 'SMS', icon: <Smartphone className="h-3.5 w-3.5" /> },
+    { id: 'browser', label: 'Browser Push', icon: <Bell className="h-3.5 w-3.5" /> },
   ];
 
   return (
     <section aria-label="Alert dispatch center" className="card p-6">
       <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-amber-300 bg-moisha-butter text-lg">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-300 bg-moisha-butter text-xl">
             📢
           </div>
           <div>
-            <h3 className="text-base font-bold text-moisha-navy">
-              Price Alert Dispatch & Browser Notifications
+            <h3 className="text-lg font-bold text-moisha-navy sm:text-xl">
+              Price Alert Dispatch &amp; Browser Notifications
             </h3>
-            <p className="text-xs text-moisha-muted">
-              Dispatch pricing alerts to {house.propertyManagerName} or trigger a live browser notification.
+            <p className="text-sm text-moisha-muted">
+              Copy or send pricing plans to your team, or trigger a live browser notification.
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-moisha-border bg-moisha-sand p-1.5 text-xs">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-moisha-border bg-moisha-sand p-1.5 text-sm">
           {channelButtons.map((ch) => (
             <button
               key={ch.id}
               type="button"
               aria-pressed={activeChannel === ch.id}
               onClick={() => setActiveChannel(ch.id)}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition-colors ${
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 font-bold transition-colors ${
                 activeChannel === ch.id
                   ? 'bg-moisha-navy text-white'
                   : 'text-moisha-muted hover:text-moisha-navy'
@@ -100,9 +100,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Preview & Send */}
         <div className="rounded-2xl border border-moisha-border bg-moisha-sand/70 p-5">
-          <div className="mb-3 flex items-center justify-between border-b border-moisha-border pb-2.5 text-xs">
+          <div className="mb-3 flex items-center justify-between border-b border-moisha-border pb-2.5 text-sm">
             <span className="font-bold text-moisha-navy">
               Channel:{' '}
               {activeChannel === 'telegram'
@@ -111,52 +110,52 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   ? 'PWA Service Worker Push'
                   : `${house.propertyManagerName} (${house.managerPhone})`}
             </span>
-            <span className="rounded-full border border-emerald-200 bg-moisha-mint px-2.5 py-0.5 text-[10px] font-bold text-moisha-green">
+            <span className="rounded-full border border-emerald-200 bg-moisha-mint px-2.5 py-0.5 text-xs font-bold text-moisha-green">
               Ready
             </span>
           </div>
 
-          <div className="rounded-2xl border border-amber-200 bg-white p-4 text-xs leading-relaxed whitespace-pre-wrap text-moisha-navy">
+          <div className="rounded-2xl border border-amber-200 bg-white p-4 text-sm leading-relaxed whitespace-pre-wrap text-moisha-navy">
             {defaultFormattedAlert}
-            <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-moisha-muted">
+            <div className="mt-2 flex items-center justify-end gap-1.5 text-xs text-moisha-muted">
               <span>{decision.timestamp}</span>
-              <CheckCircle2 className="h-3.5 w-3.5 text-moisha-royal" />
+              <CheckCircle2 className="h-4 w-4 text-moisha-royal" />
             </div>
           </div>
 
-          <div className="mt-4 flex items-center gap-2 border-t border-moisha-border pt-3">
+          <div className="mt-4 flex items-center gap-2.5 border-t border-moisha-border pt-3.5">
             <input
               type="text"
               aria-label="Custom alert message"
               placeholder="Optional custom note..."
               value={customMsg}
               onChange={(e) => setCustomMsg(e.target.value)}
-              className="field min-h-10 flex-1 text-xs"
+              className="field flex-1 text-sm sm:text-base"
             />
             <button
               type="button"
               onClick={handleSend}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-moisha-royal px-4 text-xs font-bold text-white hover:bg-blue-700"
+              className="inline-flex h-12 items-center gap-2 rounded-xl bg-moisha-royal px-4 text-sm font-bold text-white hover:bg-blue-700"
             >
-              <Send className="h-3.5 w-3.5" />
+              <Send className="h-4 w-4" />
               <span>Dispatch</span>
             </button>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2.5">
             <button
               type="button"
               onClick={() => void handleCopyMessage()}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-moisha-border bg-white px-3 py-1.5 text-xs font-bold text-moisha-navy hover:bg-moisha-sand"
+              className="inline-flex items-center gap-2 rounded-xl border border-moisha-border bg-white px-3.5 py-2 text-sm font-bold text-moisha-navy hover:bg-moisha-sand"
             >
               {copiedMsg ? (
                 <>
-                  <Check className="h-3.5 w-3.5 text-moisha-green" />
+                  <Check className="h-4 w-4 text-moisha-green" />
                   <span>Copied to Clipboard!</span>
                 </>
               ) : (
                 <>
-                  <Copy className="h-3.5 w-3.5 text-moisha-royal" />
+                  <Copy className="h-4 w-4 text-moisha-royal" />
                   <span>Copy Message</span>
                 </>
               )}
@@ -166,37 +165,42 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-moisha-mint px-3 py-1.5 text-xs font-bold text-moisha-green hover:bg-emerald-100"
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-moisha-mint px-3.5 py-2 text-sm font-bold text-moisha-green hover:bg-emerald-100"
             >
-              <Share2 className="h-3.5 w-3.5" />
+              <Share2 className="h-4 w-4" />
               <span>Share via WhatsApp</span>
             </a>
           </div>
         </div>
 
-        {/* Logs */}
         <div className="rounded-2xl border border-moisha-border bg-moisha-sand/70 p-5">
-          <div className="mb-3 flex items-center justify-between text-xs">
+          <div className="mb-3 flex items-center justify-between text-sm">
             <span className="font-bold text-moisha-muted uppercase">Recent Dispatches</span>
-            <span className="text-[11px] font-semibold text-moisha-muted">{logs.length} total</span>
+            <span className="text-xs font-semibold text-moisha-muted">{logs.length} total</span>
           </div>
 
-          <div className="max-h-60 space-y-2.5 overflow-y-auto pr-1">
-            {logs.map((log) => (
-              <div
-                key={log.id}
-                className="rounded-xl border border-moisha-border bg-white p-3 text-xs"
-              >
-                <div className="mb-1 flex items-center justify-between text-[11px]">
-                  <span className="font-bold text-moisha-royal uppercase">
-                    [{log.channel}] → {log.recipient}
-                  </span>
-                  <span className="text-moisha-muted">{log.timestamp}</span>
+          {logs.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-moisha-border bg-white p-6 text-center text-sm text-moisha-muted">
+              No alerts dispatched yet in this session.
+            </p>
+          ) : (
+            <div className="max-h-64 space-y-2.5 overflow-y-auto pr-1">
+              {logs.map((log) => (
+                <div
+                  key={log.id}
+                  className="rounded-xl border border-moisha-border bg-white p-3.5 text-sm"
+                >
+                  <div className="mb-1 flex items-center justify-between text-xs">
+                    <span className="font-bold text-moisha-royal uppercase">
+                      [{log.channel}] → {log.recipient}
+                    </span>
+                    <span className="text-moisha-muted">{log.timestamp}</span>
+                  </div>
+                  <p className="line-clamp-2 text-sm text-moisha-navy">{log.message}</p>
                 </div>
-                <p className="line-clamp-2 text-[11px] text-moisha-navy">{log.message}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>

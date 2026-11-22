@@ -101,28 +101,23 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
   };
 
   return (
-    <section aria-label="Property address lookup and portfolio" className="space-y-4">
-      <div className="card border-moisha-royal/30 bg-white p-5 shadow-sm sm:p-6">
-        <div className="mb-3 flex flex-col justify-between gap-1 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-moisha-royal" />
-            <h2 className="text-base font-extrabold text-moisha-navy">
+    <section aria-label="Property address lookup and portfolio" className="space-y-5">
+      <div className="card border-moisha-royal/30 bg-white p-6 shadow-sm sm:p-7">
+        <div className="mb-4 flex flex-col justify-between gap-1 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-2.5">
+            <Search className="h-5 w-5 text-moisha-royal" />
+            <h2 className="text-lg font-extrabold text-moisha-navy sm:text-xl">
               Enter Your Rental Property Address
             </h2>
           </div>
-          <span className="text-xs text-moisha-muted">
+          <span className="text-sm text-moisha-muted">
             Type any street address, city, or ZIP code to start pricing
           </span>
         </div>
 
-        <form
-          onSubmit={handleQuickAddressSubmit}
-          className="grid grid-cols-2 gap-2.5 sm:grid-cols-6 lg:grid-cols-12"
-        >
-          <label className="col-span-2 sm:col-span-6 lg:col-span-5">
-            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">
-              Street Address, City, or ZIP Code *
-            </span>
+        <form onSubmit={handleQuickAddressSubmit} className="space-y-4">
+          <label className="block">
+            <span className="label">Street Address, City, or ZIP Code *</span>
             <input
               id="rental-address-input"
               type="text"
@@ -130,87 +125,83 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
               placeholder="Enter street address, city, or ZIP code"
               value={quickAddress}
               onChange={(e) => setQuickAddress(e.target.value)}
-              className="field min-h-10 text-xs"
+              className="field text-base"
             />
           </label>
 
-          <label className="col-span-1 sm:col-span-1 lg:col-span-1">
-            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">Beds</span>
-            <input
-              type="number"
-              min={0}
-              max={15}
-              value={quickBeds}
-              onChange={(e) => setQuickBeds(e.target.value)}
-              className="field min-h-10 px-2.5 text-xs font-bold"
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <label className="block">
+              <span className="label">Bedrooms</span>
+              <input
+                type="number"
+                min={0}
+                max={15}
+                value={quickBeds}
+                onChange={(e) => setQuickBeds(e.target.value)}
+                className="field font-bold"
+              />
+            </label>
 
-          <label className="col-span-1 sm:col-span-1 lg:col-span-2">
-            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">
-              Your Rate ($/nt)
-            </span>
-            <input
-              type="number"
-              min={40}
-              value={quickRate}
-              onChange={(e) => setQuickRate(e.target.value)}
-              className="field min-h-10 px-2.5 text-xs font-bold"
-            />
-          </label>
+            <label className="block">
+              <span className="label">Your Rate ($/nt)</span>
+              <input
+                type="number"
+                min={40}
+                value={quickRate}
+                onChange={(e) => setQuickRate(e.target.value)}
+                className="field font-bold"
+              />
+            </label>
 
-          <label className="col-span-1 sm:col-span-1 lg:col-span-1">
-            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">
-              Floor ($)
-            </span>
-            <input
-              type="number"
-              min={35}
-              value={quickFloor}
-              onChange={(e) => setQuickFloor(e.target.value)}
-              className="field min-h-10 px-2.5 text-xs font-bold"
-            />
-          </label>
+            <label className="block">
+              <span className="label">Floor Price ($)</span>
+              <input
+                type="number"
+                min={35}
+                value={quickFloor}
+                onChange={(e) => setQuickFloor(e.target.value)}
+                className="field font-bold"
+              />
+            </label>
 
-          <label className="col-span-1 sm:col-span-1 lg:col-span-1">
-            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">
-              Empty Nts
-            </span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={quickNights}
-              onChange={(e) => setQuickNights(e.target.value)}
-              className="field min-h-10 px-2.5 text-xs font-bold"
-            />
-          </label>
+            <label className="block">
+              <span className="label">Empty Nights</span>
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={quickNights}
+                onChange={(e) => setQuickNights(e.target.value)}
+                className="field font-bold"
+              />
+            </label>
 
-          <div className="col-span-2 flex items-end sm:col-span-2 lg:col-span-2">
-            <button
-              type="submit"
-              className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-moisha-royal px-4 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
-            >
-              <span>Check Address</span>
-            </button>
+            <div className="col-span-2 flex items-end sm:col-span-1">
+              <button
+                type="submit"
+                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-moisha-royal px-5 text-base font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
+              >
+                <span>Check Address</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>
 
       {houses.length > 0 && (
-        <div className="card p-5">
-          <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="card p-6">
+          <div className="mb-4 flex items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-bold text-moisha-navy">
+              <h3 className="text-lg font-bold text-moisha-navy">
                 Your Properties ({houses.length})
               </h3>
-              <p className="text-xs text-moisha-muted">
+              <p className="text-sm text-moisha-muted">
                 Click a property to view its pricing advice, or click Edit to adjust dates, floor price, or delete it.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {houses.map((house) => {
               const isSelected = house.id === selectedHouseId;
               const hasGap = !house.isBooked && house.unbookedDaysCount > 0;
@@ -218,7 +209,7 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
               return (
                 <article
                   key={house.id}
-                  className={`flex flex-col justify-between rounded-2xl border p-4 transition-all ${
+                  className={`flex flex-col justify-between rounded-2xl border p-5 transition-all ${
                     isSelected
                       ? 'border-moisha-royal bg-white shadow-sm ring-2 ring-moisha-royal/20'
                       : 'border-moisha-border bg-moisha-sand/70 hover:border-slate-300 hover:bg-white'
@@ -230,65 +221,65 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
                     onClick={() => onSelectHouse(house.id)}
                     className="w-full text-left"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex min-w-0 items-center gap-3">
                         <div
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
                             isSelected
                               ? 'bg-moisha-navy text-white'
                               : 'border border-moisha-border bg-white text-moisha-navy'
                           }`}
                         >
-                          <Home className="h-4 w-4" />
+                          <Home className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
-                          <h4 className="truncate text-sm font-bold text-moisha-navy">
+                          <h4 className="truncate text-base font-bold text-moisha-navy">
                             {house.nickname}
                           </h4>
-                          <p className="truncate text-[11px] text-moisha-muted">
+                          <p className="truncate text-sm text-moisha-muted">
                             {house.bedrooms} BR · {house.bathrooms} BA · {house.zipCode}
                           </p>
                         </div>
                       </div>
 
                       <div className="shrink-0 text-right">
-                        <div className="text-base font-extrabold text-moisha-navy">
+                        <div className="text-xl font-extrabold text-moisha-navy">
                           ${house.currentPrice}
-                          <span className="text-[11px] font-normal text-moisha-muted">/nt</span>
+                          <span className="text-xs font-normal text-moisha-muted">/nt</span>
                         </div>
-                        <div className="text-[10px] font-medium text-moisha-muted">
+                        <div className="text-xs font-medium text-moisha-muted">
                           Floor ${house.floorPrice}
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-1.5">
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                       {hasGap ? (
-                        <span className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-moisha-butter px-2.5 py-0.5 text-[11px] font-bold text-moisha-amber">
-                          <AlertCircle className="h-3 w-3 shrink-0" />
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-moisha-butter px-3 py-1 text-xs font-bold text-moisha-amber">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                           {house.unbookedDaysCount} Empty Nights ({house.unbookedStartDate.slice(5)}–
                           {house.unbookedEndDate.slice(5)})
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-lg border border-emerald-200 bg-moisha-mint px-2.5 py-0.5 text-[11px] font-bold text-moisha-green">
+                        <span className="inline-flex items-center rounded-lg border border-emerald-200 bg-moisha-mint px-3 py-1 text-xs font-bold text-moisha-green">
                           ✓ Booked Window
                         </span>
                       )}
 
                       {house.activePromotion && (
-                        <span className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-moisha-sky px-2 py-0.5 text-[10px] font-bold text-moisha-royal">
-                          <Sparkles className="h-3 w-3" />
+                        <span className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-moisha-sky px-2.5 py-1 text-xs font-bold text-moisha-royal">
+                          <Sparkles className="h-3.5 w-3.5" />
                           Promo ${house.activePromotion.effectivePrice}/nt
                         </span>
                       )}
                     </div>
                   </button>
 
-                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-moisha-border/70 pt-2.5 text-xs">
+                  <div className="mt-3.5 flex items-center justify-between gap-2 border-t border-moisha-border/70 pt-3 text-sm">
                     <div className="flex min-w-0 items-center gap-1.5 text-moisha-muted">
-                      <MapPin className="h-3.5 w-3.5 shrink-0 text-moisha-amber" />
+                      <MapPin className="h-4 w-4 shrink-0 text-moisha-amber" />
                       <span
-                        className="truncate text-[11px] font-medium text-moisha-navy"
+                        className="truncate text-sm font-medium text-moisha-navy"
                         title={house.address}
                       >
                         {house.address}
@@ -298,9 +289,9 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
                       type="button"
                       onClick={() => openEditModal(house)}
                       aria-label={`Edit ${house.nickname}`}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-moisha-royal hover:bg-moisha-sky"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-sm font-semibold text-moisha-royal hover:bg-moisha-sky"
                     >
-                      <Edit3 className="h-3 w-3" />
+                      <Edit3 className="h-3.5 w-3.5" />
                       <span>Edit</span>
                     </button>
                   </div>
@@ -318,22 +309,22 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
           aria-labelledby="edit-property-dialog-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
         >
-          <div className="w-full max-w-md rounded-2xl border border-moisha-border bg-white p-6 shadow-xl">
+          <div className="w-full max-w-lg rounded-2xl border border-moisha-border bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 id="edit-property-dialog-title" className="text-base font-bold text-moisha-navy">
+              <h3 id="edit-property-dialog-title" className="text-lg font-bold text-moisha-navy">
                 Edit Property &amp; Calendar Gap
               </h3>
               <button
                 type="button"
                 onClick={() => setEditingHouse(null)}
                 aria-label="Close edit modal"
-                className="rounded-lg p-1 text-moisha-muted hover:bg-moisha-sand"
+                className="rounded-lg p-1.5 text-moisha-muted hover:bg-moisha-sand"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="space-y-3">
+            <form onSubmit={handleSaveEdit} className="space-y-3.5">
               <label className="block">
                 <span className="label">Nickname</span>
                 <input
@@ -341,7 +332,7 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
                   required
                   value={editNickname}
                   onChange={(e) => setEditNickname(e.target.value)}
-                  className="field text-sm"
+                  className="field"
                 />
               </label>
 
@@ -352,7 +343,7 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
                   required
                   value={editAddress}
                   onChange={(e) => setEditAddress(e.target.value)}
-                  className="field text-sm"
+                  className="field"
                 />
               </label>
 
@@ -363,7 +354,7 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
                     type="text"
                     value={editNeighborhood}
                     onChange={(e) => setEditNeighborhood(e.target.value)}
-                    className="field text-sm"
+                    className="field"
                   />
                 </label>
                 <label className="block">
@@ -372,7 +363,7 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
                     type="text"
                     value={editZip}
                     onChange={(e) => setEditZip(e.target.value)}
-                    className="field text-sm"
+                    className="field"
                   />
                 </label>
               </div>
@@ -385,7 +376,7 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
                     min={40}
                     value={editCurrentPrice}
                     onChange={(e) => setEditCurrentPrice(e.target.value)}
-                    className="field text-sm"
+                    className="field"
                   />
                 </label>
                 <label className="block">
@@ -395,7 +386,7 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
                     min={35}
                     value={editFloorPrice}
                     onChange={(e) => setEditFloorPrice(e.target.value)}
-                    className="field text-sm"
+                    className="field"
                   />
                 </label>
               </div>
@@ -407,7 +398,7 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
                     type="date"
                     value={editStartDate}
                     onChange={(e) => setEditStartDate(e.target.value)}
-                    className="field text-sm"
+                    className="field"
                   />
                 </label>
                 <label className="block">
@@ -416,12 +407,12 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
                     type="date"
                     value={editEndDate}
                     onChange={(e) => setEditEndDate(e.target.value)}
-                    className="field text-sm"
+                    className="field"
                   />
                 </label>
               </div>
 
-              <label className="flex items-center gap-2 pt-1 text-xs font-medium text-moisha-navy">
+              <label className="flex items-center gap-2.5 pt-1 text-sm font-medium text-moisha-navy">
                 <input
                   type="checkbox"
                   checked={editIsBooked}
@@ -438,21 +429,21 @@ export const PropertySelector: React.FC<PropertySelectorProps> = ({
                     onDeleteHouse(editingHouse.id);
                     setEditingHouse(null);
                   }}
-                  className="inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-bold text-moisha-red hover:bg-moisha-blush"
+                  className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-bold text-moisha-red hover:bg-moisha-blush"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                   <span>Delete</span>
                 </button>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <button
                     type="button"
                     onClick={() => setEditingHouse(null)}
-                    className="btn-quiet text-xs"
+                    className="btn-quiet"
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="btn-primary text-xs">
+                  <button type="submit" className="btn-primary">
                     Save Changes
                   </button>
                 </div>

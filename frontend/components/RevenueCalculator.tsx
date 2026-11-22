@@ -85,17 +85,16 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
 
   return (
     <section aria-label="Revenue and profit calculator" className="card p-6">
-      {/* Header */}
       <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-moisha-mint text-moisha-green">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-moisha-mint text-moisha-green">
             <Calculator className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-moisha-navy">
-              Revenue, Expense & Net Profit Calculator
+            <h3 className="text-lg font-bold text-moisha-navy sm:text-xl">
+              Revenue, Expense &amp; Net Profit Calculator
             </h3>
-            <p className="text-xs text-moisha-muted">
+            <p className="text-sm text-moisha-muted">
               Model gross payout, platform fees, cleaning turnover, and odds-weighted net profit for{' '}
               <strong>{house.nickname}</strong>
             </p>
@@ -103,14 +102,13 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
         </div>
       </div>
 
-      {/* Interactive Controls */}
-      <div className="mb-6 grid grid-cols-1 gap-4 rounded-2xl border border-moisha-border bg-moisha-sand/70 p-4 lg:grid-cols-12">
+      <div className="mb-6 grid grid-cols-1 gap-5 rounded-2xl border border-moisha-border bg-moisha-sand/70 p-5 lg:grid-cols-12">
         <div className="lg:col-span-6">
-          <div className="mb-1.5 flex items-center justify-between text-xs">
+          <div className="mb-2 flex items-center justify-between text-sm sm:text-base">
             <label htmlFor="what-if-rate-slider" className="font-bold text-moisha-navy">
               Test What-If Nightly Rate: <span className="text-moisha-royal">${customRate}/nt</span>
             </label>
-            <span className="text-[11px] font-medium text-moisha-muted">
+            <span className="text-sm font-medium text-moisha-muted">
               Est. booking odds: <strong>{customProb}%</strong>
             </span>
           </div>
@@ -123,7 +121,7 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
             onChange={(e) => setCustomRate(Number(e.target.value))}
             className="w-full accent-moisha-royal"
           />
-          <div className="mt-1 flex items-center justify-between text-[11px] text-moisha-muted">
+          <div className="mt-1.5 flex items-center justify-between text-xs text-moisha-muted sm:text-sm">
             <span>${sliderMin}</span>
             <span className="font-semibold text-moisha-green">
               Floor ${decision.effectiveFloorPrice}
@@ -131,8 +129,8 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
             <span>${sliderMax}</span>
           </div>
           {isBelowFloor && (
-            <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-red-200 bg-moisha-blush px-2.5 py-1.5 text-[11px] font-bold text-moisha-red">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            <div className="mt-2.5 flex items-center gap-2 rounded-lg border border-red-200 bg-moisha-blush px-3 py-2 text-xs font-bold text-moisha-red sm:text-sm">
+              <AlertCircle className="h-4 w-4 shrink-0" />
               <span>
                 Below your ${decision.effectiveFloorPrice}/nt safety floor — apply only if intentional.
               </span>
@@ -142,18 +140,18 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:col-span-6">
           <label className="block">
-            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">Nights</span>
+            <span className="mb-1.5 block text-xs font-bold text-moisha-muted">Nights</span>
             <input
               type="number"
               min={1}
               max={30}
               value={customNights}
               onChange={(e) => setCustomNights(Math.max(1, Number(e.target.value) || 1))}
-              className="field min-h-9 px-2.5 text-xs font-bold"
+              className="field min-h-11 px-3 text-sm font-bold"
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">
+            <span className="mb-1.5 block text-xs font-bold text-moisha-muted">
               Guest Clean ($)
             </span>
             <input
@@ -163,11 +161,11 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
               onChange={(e) =>
                 onUpdateHouseCosts({ cleaningFee: Math.max(0, Number(e.target.value) || 0) })
               }
-              className="field min-h-9 px-2.5 text-xs font-bold"
+              className="field min-h-11 px-3 text-sm font-bold"
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">
+            <span className="mb-1.5 block text-xs font-bold text-moisha-muted">
               Cleaner Cost ($)
             </span>
             <input
@@ -177,11 +175,11 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
               onChange={(e) =>
                 onUpdateHouseCosts({ cleaningCost: Math.max(0, Number(e.target.value) || 0) })
               }
-              className="field min-h-9 px-2.5 text-xs font-bold"
+              className="field min-h-11 px-3 text-sm font-bold"
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">
+            <span className="mb-1.5 block text-xs font-bold text-moisha-muted">
               Fixed Cost ($/nt)
             </span>
             <input
@@ -193,43 +191,42 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
                   nightlyFixedCost: Math.max(0, Number(e.target.value) || 0),
                 })
               }
-              className="field min-h-9 px-2.5 text-xs font-bold"
+              className="field min-h-11 px-3 text-sm font-bold"
             />
           </label>
         </div>
       </div>
 
-      {/* 3-Scenario Comparison Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {scenarios.map(({ data, highlight }) => (
           <div
             key={data.label}
-            className={`rounded-2xl border p-4 ${
+            className={`rounded-2xl border p-5 ${
               highlight
                 ? 'border-2 border-moisha-royal bg-moisha-sky/40'
                 : 'border-moisha-border bg-white'
             }`}
           >
-            <div className="mb-3 flex items-center justify-between border-b border-moisha-border pb-2.5">
+            <div className="mb-3.5 flex items-center justify-between border-b border-moisha-border pb-3">
               <div>
                 <span
-                  className={`text-[10px] font-bold uppercase ${
+                  className={`text-xs font-bold uppercase ${
                     highlight ? 'text-moisha-royal' : 'text-moisha-muted'
                   }`}
                 >
                   {data.label}
                 </span>
-                <div className="text-xl font-extrabold text-moisha-navy">
+                <div className="text-2xl font-extrabold text-moisha-navy">
                   ${data.nightlyRate}
-                  <span className="text-xs font-normal text-moisha-muted">/nt</span>
+                  <span className="text-sm font-normal text-moisha-muted">/nt</span>
                 </div>
               </div>
-              <span className="rounded-lg bg-moisha-sand px-2.5 py-1 text-xs font-bold text-moisha-navy border border-moisha-border">
+              <span className="rounded-lg border border-moisha-border bg-moisha-sand px-3 py-1 text-sm font-bold text-moisha-navy">
                 {data.bookingProbability}% odds
               </span>
             </div>
 
-            <dl className="space-y-1.5 text-xs">
+            <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-moisha-muted">
                   Room revenue ({data.nights} nt)
@@ -255,7 +252,7 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
                 <dd className="font-medium text-moisha-red">-${data.fixedCosts}</dd>
               </div>
 
-              <div className="mt-2 flex justify-between border-t border-moisha-border pt-2 text-sm">
+              <div className="mt-2.5 flex justify-between border-t border-moisha-border pt-2.5 text-base">
                 <dt className="font-bold text-moisha-navy">Net Profit (If Booked)</dt>
                 <dd
                   className={`font-extrabold ${
@@ -265,7 +262,7 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
                   ${data.netProfitIfBooked}
                 </dd>
               </div>
-              <div className="flex justify-between text-xs">
+              <div className="flex justify-between text-sm">
                 <dt className="font-semibold text-moisha-muted">Expected Value (Odds-Weighted)</dt>
                 <dd className="font-bold text-moisha-navy">${data.expectedNetValue}</dd>
               </div>
@@ -274,8 +271,7 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
         ))}
       </div>
 
-      {/* Apply Custom Rate Footer */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-moisha-border pt-4 text-xs">
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-moisha-border pt-4 text-sm">
         <span className="text-moisha-muted">
           Expected value weights booked net profit against vacant holding costs (-$
           {house.nightlyFixedCost * customNights}).
@@ -285,9 +281,9 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
           type="button"
           onClick={() => onApplyPrice(Math.max(decision.effectiveFloorPrice, customRate))}
           disabled={Math.max(decision.effectiveFloorPrice, customRate) === house.currentPrice}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-moisha-navy px-4 py-2 text-xs font-bold text-white transition-opacity hover:bg-blue-950 disabled:opacity-40"
+          className="inline-flex items-center gap-2 rounded-xl bg-moisha-navy px-5 py-2.5 text-sm font-bold text-white transition-opacity hover:bg-blue-950 disabled:opacity-40 sm:text-base"
         >
-          <Check className="h-3.5 w-3.5" />
+          <Check className="h-4 w-4" />
           <span>
             Apply ${Math.max(decision.effectiveFloorPrice, customRate)}/nt Rate
           </span>

@@ -109,54 +109,54 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
   return (
     <section
       aria-label="Pocket advisor chat"
-      className="card flex h-[520px] flex-col justify-between p-6"
+      className="card flex h-[600px] flex-col justify-between p-6"
     >
-      <div className="flex items-center justify-between border-b border-moisha-border pb-3.5">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-amber-300 bg-moisha-butter text-lg">
+      <div className="flex items-center justify-between border-b border-moisha-border pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-300 bg-moisha-butter text-xl">
             🕎
           </div>
           <div>
-            <h3 className="text-base font-bold text-moisha-navy">Ask Uncle Moisha</h3>
-            <p className="text-xs text-moisha-muted">
+            <h3 className="text-lg font-bold text-moisha-navy sm:text-xl">Ask Uncle Moisha</h3>
+            <p className="text-sm text-moisha-muted">
               Copilot for {house.nickname} · Floor ${decision.effectiveFloorPrice}/nt
             </p>
           </div>
         </div>
-        <span className="rounded-full border border-blue-200 bg-moisha-sky px-2.5 py-0.5 text-[11px] font-bold text-moisha-royal">
+        <span className="rounded-full border border-blue-200 bg-moisha-sky px-3 py-1 text-xs font-bold text-moisha-royal">
           Online
         </span>
       </div>
 
-      <div className="flex flex-wrap gap-1.5 py-2.5">
+      <div className="flex flex-wrap gap-2 py-3">
         {presets.map((preset) => (
           <button
             key={preset}
             type="button"
             onClick={() => void handleSend(preset)}
-            className="rounded-full border border-moisha-border bg-moisha-sand px-3 py-1 text-[11px] font-medium text-moisha-navy transition-colors hover:border-amber-300 hover:bg-moisha-butter"
+            className="rounded-full border border-moisha-border bg-moisha-sand px-3.5 py-1.5 text-xs font-semibold text-moisha-navy transition-colors hover:border-amber-300 hover:bg-moisha-butter sm:text-sm"
           >
             {preset}
           </button>
         ))}
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto py-2 pr-1">
+      <div className="flex-1 space-y-3.5 overflow-y-auto py-2 pr-1">
         {messages.map((m) => {
           const isAi = m.role === 'assistant';
           return (
             <div
               key={m.id}
-              className={`flex gap-2.5 ${isAi ? 'justify-start' : 'justify-end'}`}
+              className={`flex gap-3 ${isAi ? 'justify-start' : 'justify-end'}`}
             >
               {isAi && (
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-amber-300 bg-moisha-butter text-xs">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-300 bg-moisha-butter text-sm">
                   🕎
                 </div>
               )}
 
               <div
-                className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed ${
+                className={`max-w-[88%] rounded-2xl p-4 text-sm leading-relaxed sm:text-base ${
                   isAi
                     ? 'border border-moisha-border bg-moisha-sand text-moisha-navy'
                     : 'bg-moisha-royal text-white'
@@ -165,8 +165,8 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
                 <p className="whitespace-pre-wrap">{m.content}</p>
 
                 {isAi && m.suggestedAction && (
-                  <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-moisha-border pt-2">
-                    <span className="text-[10px] font-bold text-moisha-amber">
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-moisha-border pt-2.5">
+                    <span className="text-xs font-bold text-moisha-amber">
                       Quick Action:
                     </span>
                     <button
@@ -174,16 +174,16 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
                       onClick={() =>
                         onApplyAction(m.suggestedAction!.type, m.suggestedAction!.value)
                       }
-                      className="inline-flex items-center gap-1 rounded-lg bg-moisha-green px-2.5 py-1 text-[11px] font-bold text-white transition-colors hover:bg-emerald-800"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-moisha-green px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-emerald-800 sm:text-sm"
                     >
-                      <Zap className="h-3 w-3 fill-current" />
+                      <Zap className="h-3.5 w-3.5 fill-current" />
                       <span>{m.suggestedAction.label}</span>
                     </button>
                   </div>
                 )}
 
                 <span
-                  className={`mt-1 block text-right text-[10px] ${
+                  className={`mt-1.5 block text-right text-xs ${
                     isAi ? 'text-moisha-muted' : 'text-blue-100'
                   }`}
                 >
@@ -192,8 +192,8 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
               </div>
 
               {!isAi && (
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-slate-200 text-moisha-navy">
-                  <User className="h-3.5 w-3.5" />
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-200 text-moisha-navy">
+                  <User className="h-4 w-4" />
                 </div>
               )}
             </div>
@@ -201,8 +201,8 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
         })}
 
         {isThinking && (
-          <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-moisha-butter px-3 py-2 text-xs font-medium text-moisha-amber">
-            <Sparkles className="h-3.5 w-3.5 animate-spin" />
+          <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-moisha-butter px-3.5 py-2.5 text-sm font-medium text-moisha-amber">
+            <Sparkles className="h-4 w-4 animate-spin" />
             <span>Moisha is checking the numbers...</span>
           </div>
         )}
@@ -213,7 +213,7 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
           e.preventDefault();
           void handleSend();
         }}
-        className="flex items-center gap-2 border-t border-moisha-border pt-3"
+        className="flex items-center gap-2.5 border-t border-moisha-border pt-3.5"
       >
         <input
           type="text"
@@ -221,14 +221,14 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
           placeholder={`Ask about ${house.nickname} rates, promos, or profit...`}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="field min-h-10 flex-1 text-xs"
+          className="field flex-1 text-base"
         />
         <button
           type="submit"
           disabled={!input.trim() || isThinking}
-          className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-moisha-navy px-4 text-xs font-bold text-white transition-opacity disabled:opacity-40"
+          className="inline-flex h-12 items-center gap-2 rounded-xl bg-moisha-navy px-5 text-sm font-bold text-white transition-opacity disabled:opacity-40 sm:text-base"
         >
-          <Send className="h-3.5 w-3.5" />
+          <Send className="h-4 w-4" />
           <span>Send</span>
         </button>
       </form>
