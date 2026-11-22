@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { BarChart3, Layers, Calculator, Sliders } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { PropertySelector } from './components/PropertySelector';
@@ -50,36 +50,43 @@ export default function App() {
   const [proxyAvailable, setProxyAvailable] = useState(false);
   const [proxyModel, setProxyModel] = useState('gemini-2.5-flash');
 
-  // Optional Gemini narrative override keyed to exact house+rules snapshot
+  // Monotonic token to discard stale in-flight Gemini scans if user edits state mid-request
+  const analysisRequestIdRef = useRef(0);
+
   const [aiDecisionOverride, setAiDecisionOverride] = useState<{
     houseId: string;
     decision: AgentDecision;
   } | null>(null);
+
+  const invalidateAiOverride = useCallback(() => {
+    analysisRequestIdRef.current += 1;
+    setAiDecisionOverride(null);
+  }, []);
 
   const selectedHouse = useMemo(
     () => houses.find((h) => h.id === selectedHouseId) || houses[0],
     [houses, selectedHouseId],
   );
 
-  // Reactive deterministic pricing engine: always up to date with any house, comp, or rule change
   const baseDecision = useMemo(
     () => evaluatePropertyPricing(selectedHouse, rules, lastScannedTime || undefined),
     [selectedHouse, rules, lastScannedTime],
   );
 
-  const decision: AgentDecision =
-    aiDecisionOverride && aiDecisionOverride.houseId === selectedHouse.id
-      ? {
-          ...baseDecision,
-          headline: aiDecisionOverride.decision.headline,
-          reasoning: aiDecisionOverride.decision.reasoning,
-          neighborGapAnalysis: aiDecisionOverride.decision.neighborGapAnalysis,
-          recommendedActions: aiDecisionOverride.decision.recommendedActions,
-          source: 'gemini',
-        }
-      : baseDecision;
+  const decision = useMemo<AgentDecision>(() => {
+    if (aiDecisionOverride && aiDecisionOverride.houseId === selectedHouse.id) {
+      return {
+        ...baseDecision,
+        headline: aiDecisionOverride.decision.headline,
+        reasoning: aiDecisionOverride.decision.reasoning,
+        neighborGapAnalysis: aiDecisionOverride.decision.neighborGapAnalysis,
+        recommendedActions: aiDecisionOverride.decision.recommendedActions,
+        source: 'gemini',
+      };
+    }
+    return baseDecision;
+  }, [aiDecisionOverride, baseDecision, selectedHouse.id]);
 
-  // Persist portfolio, rules, logs, and settings automatically
   useEffect(() => {
     savePersistedState({
       houses,
@@ -90,7 +97,6 @@ export default function App() {
     });
   }, [houses, selectedHouseId, rules, logs, aiSettings]);
 
-  // Check whether local Vite dev proxy has GEMINI_API_KEY configured
   useEffect(() => {
     let active = true;
     checkGeminiProxyStatus().then((status) => {
@@ -132,6 +138,7 @@ export default function App() {
 
   const runAnalysisForHouse = useCallback(
     async (targetHouse: PropertyHouse, currentRules: PricingRule[]) => {
+      const reqId = ++analysisRequestIdRef.current;
       setIsScanning(true);
       try {
         const analyzed = await runMoishaAnalysis(
@@ -140,6 +147,9 @@ export default function App() {
           aiSettings,
           proxyAvailable,
         );
+        if (reqId !== analysisRequestIdRef.current) {
+          return;
+        }
         const nowStr = new Date().toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit',
@@ -156,7 +166,9 @@ export default function App() {
           triggerChime();
         }
       } finally {
-        setIsScanning(false);
+        if (reqId === analysisRequestIdRef.current) {
+          setIsScanning(false);
+        }
       }
     },
     [aiSettings, proxyAvailable, triggerChime],
@@ -167,19 +179,20 @@ export default function App() {
   };
 
   const handleUpdateHouse = (houseId: string, updates: Partial<PropertyHouse>) => {
-    setAiDecisionOverride(null);
+    invalidateAiOverride();
     setHouses((prev) =>
       prev.map((h) => (h.id === houseId ? { ...h, ...updates } : h)),
     );
   };
 
   const handleAddHouse = (created: PropertyHouse) => {
+    invalidateAiOverride();
     setHouses((prev) => [...prev, created]);
     setSelectedHouseId(created.id);
-    setAiDecisionOverride(null);
   };
 
   const handleDeleteHouse = (houseId: string) => {
+    invalidateAiOverride();
     setHouses((prev) => {
       const remaining = prev.filter((h) => h.id !== houseId);
       if (remaining.length > 0 && selectedHouseId === houseId) {
@@ -187,11 +200,10 @@ export default function App() {
       }
       return remaining.length > 0 ? remaining : prev;
     });
-    setAiDecisionOverride(null);
   };
 
   const handleUpdateComp = (compId: string, updates: Partial<ListingComp>) => {
-    setAiDecisionOverride(null);
+    invalidateAiOverride();
     setHouses((prev) =>
       prev.map((h) =>
         h.id === selectedHouse.id
@@ -205,7 +217,7 @@ export default function App() {
   };
 
   const handleAddComp = (newComp: Omit<ListingComp, 'id'>) => {
-    setAiDecisionOverride(null);
+    invalidateAiOverride();
     const created: ListingComp = {
       ...newComp,
       id: `comp-${Date.now()}`,
@@ -218,7 +230,7 @@ export default function App() {
   };
 
   const handleDeleteComp = (compId: string) => {
-    setAiDecisionOverride(null);
+    invalidateAiOverride();
     setHouses((prev) =>
       prev.map((h) =>
         h.id === selectedHouse.id
@@ -228,7 +240,6 @@ export default function App() {
     );
   };
 
-  // Fixed: computes updated house synchronously and passes directly into analysis (zero stale closure)
   const handleSimulateNeighborDrop = () => {
     const targetCompIndex = selectedHouse.comps.findIndex((c) => !c.isBooked);
     const idxToDrop = targetCompIndex >= 0 ? targetCompIndex : 0;
@@ -246,7 +257,7 @@ export default function App() {
     );
     const updatedHouse: PropertyHouse = { ...selectedHouse, comps: updatedComps };
 
-    setAiDecisionOverride(null);
+    invalidateAiOverride();
     setHouses((prev) =>
       prev.map((h) => (h.id === selectedHouse.id ? updatedHouse : h)),
     );
@@ -255,7 +266,7 @@ export default function App() {
 
   const handleApplyPriceChange = (newPrice: number) => {
     const clamped = Math.max(decision.effectiveFloorPrice, Math.round(newPrice));
-    setAiDecisionOverride(null);
+    invalidateAiOverride();
     setHouses((prev) =>
       prev.map((h) => (h.id === selectedHouse.id ? { ...h, currentPrice: clamped } : h)),
     );
@@ -267,7 +278,7 @@ export default function App() {
   };
 
   const handleApplyPromotion = (promo: AirbnbPromotion | null) => {
-    setAiDecisionOverride(null);
+    invalidateAiOverride();
     setHouses((prev) =>
       prev.map((h) => (h.id === selectedHouse.id ? { ...h, activePromotion: promo } : h)),
     );
@@ -308,13 +319,13 @@ export default function App() {
   };
 
   const handleResetDemoData = () => {
+    invalidateAiOverride();
     const fresh = clearPersistedState();
     setHouses(fresh.houses);
     setSelectedHouseId(fresh.selectedHouseId);
     setRules(fresh.rules);
     setLogs(fresh.logs);
     setAiSettings(fresh.aiSettings);
-    setAiDecisionOverride(null);
   };
 
   const aiActive =
@@ -374,7 +385,6 @@ export default function App() {
       />
 
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        {/* Portfolio Strip */}
         <PropertySelector
           houses={houses}
           selectedHouseId={selectedHouse.id}
@@ -384,7 +394,6 @@ export default function App() {
           onDeleteHouse={handleDeleteHouse}
         />
 
-        {/* Workspace Navigation Tabs */}
         <nav
           aria-label="Workspace sections"
           className="flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-moisha-border bg-white p-1.5 shadow-sm"
@@ -395,6 +404,7 @@ export default function App() {
               <button
                 key={tab.id}
                 type="button"
+                aria-current={isCurrent ? 'page' : undefined}
                 onClick={() => setActiveTab(tab.id)}
                 className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${
                   isCurrent
@@ -422,7 +432,6 @@ export default function App() {
           })}
         </nav>
 
-        {/* Tab 1: Overview, Benchmark & Copilot */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <AgentAlertBanner
@@ -436,6 +445,7 @@ export default function App() {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <MarketCharts house={selectedHouse} decision={decision} />
               <PocketAdvisorChat
+                key={selectedHouse.id}
                 house={selectedHouse}
                 decision={decision}
                 aiSettings={aiSettings}
@@ -455,7 +465,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 2: Neighbor Comps & Submarket Grounding */}
         {activeTab === 'comps' && (
           <div className="space-y-6">
             <CompsManager
@@ -468,6 +477,7 @@ export default function App() {
               onSimulateNeighborUndercut={handleSimulateNeighborDrop}
             />
             <LiveMarketGroundingCard
+              key={selectedHouse.id}
               house={selectedHouse}
               decision={decision}
               aiSettings={aiSettings}
@@ -476,7 +486,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 3: Revenue Calculator & Promotions */}
         {activeTab === 'revenue' && (
           <div className="space-y-6">
             <RevenueCalculator
@@ -495,20 +504,19 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 4: Rules Engine & Alert Dispatch */}
         {activeTab === 'rules' && (
           <div className="space-y-6">
             <RuleEngineCard
               house={selectedHouse}
               rules={rules}
               onToggleRule={(id) => {
-                setAiDecisionOverride(null);
+                invalidateAiOverride();
                 setRules((prev) =>
                   prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)),
                 );
               }}
               onUpdateParam={(id, val) => {
-                setAiDecisionOverride(null);
+                invalidateAiOverride();
                 setRules((prev) =>
                   prev.map((r) => (r.id === id ? { ...r, parameterValue: val } : r)),
                 );
@@ -527,17 +535,19 @@ export default function App() {
         )}
       </main>
 
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        aiSettings={aiSettings}
-        proxyAvailable={proxyAvailable}
-        proxyModel={proxyModel}
-        onUpdateSettings={(updates) =>
-          setAiSettings((prev) => ({ ...prev, ...updates }))
-        }
-        onResetDemoData={handleResetDemoData}
-      />
+      {settingsOpen && (
+        <SettingsModal
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          aiSettings={aiSettings}
+          proxyAvailable={proxyAvailable}
+          proxyModel={proxyModel}
+          onUpdateSettings={(updates) =>
+            setAiSettings((prev) => ({ ...prev, ...updates }))
+          }
+          onResetDemoData={handleResetDemoData}
+        />
+      )}
 
       <footer className="mt-10 border-t border-moisha-border bg-white py-5 text-center text-xs text-moisha-muted">
         Moisha Pocket Advisor · Neighborhood Rental Pricing, Floor Guardrails & Profit Calculator

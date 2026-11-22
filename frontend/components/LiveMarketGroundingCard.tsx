@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Globe, ExternalLink, RefreshCw, Sparkles, CheckCircle2 } from 'lucide-react';
-import { PropertyHouse, AgentDecision, LiveMarketScanResult, AiSettings } from '../types';
+import {
+  PropertyHouse,
+  AgentDecision,
+  LiveMarketScanResult,
+  AiSettings,
+  sanitizeExternalUrl,
+} from '../types';
 import { buildFallbackMarketGrounding } from '../services/pricingEngine';
 import { scanNeighborhoodMarket } from '../services/aiService';
 
@@ -18,21 +24,34 @@ export const LiveMarketGroundingCard: React.FC<LiveMarketGroundingCardProps> = (
   proxyAvailable,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<LiveMarketScanResult>(() =>
-    buildFallbackMarketGrounding(house, decision, '08:00 AM'),
-  );
+  const [liveResult, setLiveResult] = useState<LiveMarketScanResult | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    setResult(buildFallbackMarketGrounding(house, decision));
-  }, [house, decision]);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const fallbackResult = useMemo(
+    () => buildFallbackMarketGrounding(house, decision, decision.timestamp),
+    [house, decision],
+  );
+
+  const result = liveResult || fallbackResult;
 
   const handleScan = async () => {
     setLoading(true);
     try {
       const scan = await scanNeighborhoodMarket(house, decision, aiSettings, proxyAvailable);
-      setResult(scan);
+      if (mountedRef.current) {
+        setLiveResult(scan);
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -66,7 +85,7 @@ export const LiveMarketGroundingCard: React.FC<LiveMarketGroundingCardProps> = (
 
         <button
           type="button"
-          onClick={handleScan}
+          onClick={() => void handleScan()}
           disabled={loading}
           className="inline-flex items-center gap-1.5 self-start rounded-xl bg-moisha-royal px-3.5 py-2 text-xs font-bold text-white transition-opacity hover:bg-blue-700 disabled:opacity-50 sm:self-auto"
         >
@@ -84,7 +103,6 @@ export const LiveMarketGroundingCard: React.FC<LiveMarketGroundingCardProps> = (
         </button>
       </div>
 
-      {/* Weekday / Weekend Range Strip */}
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-moisha-border bg-moisha-sand/70 p-3.5">
           <span className="text-[11px] font-bold text-moisha-muted uppercase">
@@ -104,7 +122,6 @@ export const LiveMarketGroundingCard: React.FC<LiveMarketGroundingCardProps> = (
         </div>
       </div>
 
-      {/* Summary */}
       <div className="rounded-2xl border border-moisha-border bg-moisha-sand p-4 text-xs leading-relaxed text-moisha-navy">
         <div className="mb-2 flex items-center justify-between border-b border-moisha-border pb-2 text-[11px] text-moisha-muted">
           <span className="flex items-center gap-1.5 font-bold text-moisha-royal">
@@ -116,7 +133,6 @@ export const LiveMarketGroundingCard: React.FC<LiveMarketGroundingCardProps> = (
         <p className="whitespace-pre-wrap">{result.summary}</p>
       </div>
 
-      {/* Sources */}
       {result.sources.length > 0 && (
         <div className="mt-4">
           <span className="mb-2 block text-[11px] font-bold text-moisha-muted uppercase">
@@ -126,9 +142,9 @@ export const LiveMarketGroundingCard: React.FC<LiveMarketGroundingCardProps> = (
             {result.sources.map((src, idx) => (
               <a
                 key={`${src.uri}-${idx}`}
-                href={src.uri}
+                href={sanitizeExternalUrl(src.uri)}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-xl border border-moisha-border bg-white px-3 py-1.5 text-xs font-medium text-moisha-navy transition-colors hover:bg-moisha-sand"
               >
                 <Globe className="h-3 w-3 shrink-0 text-moisha-royal" />

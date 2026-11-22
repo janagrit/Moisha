@@ -141,8 +141,8 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:col-span-6">
-          <div>
-            <label className="mb-1 block text-[11px] font-bold text-moisha-muted">Nights</label>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">Nights</span>
             <input
               type="number"
               min={1}
@@ -151,11 +151,11 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
               onChange={(e) => setCustomNights(Math.max(1, Number(e.target.value) || 1))}
               className="field min-h-9 px-2.5 text-xs font-bold"
             />
-          </div>
-          <div>
-            <label className="mb-1 block text-[11px] font-bold text-moisha-muted">
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">
               Guest Clean ($)
-            </label>
+            </span>
             <input
               type="number"
               min={0}
@@ -165,11 +165,11 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
               }
               className="field min-h-9 px-2.5 text-xs font-bold"
             />
-          </div>
-          <div>
-            <label className="mb-1 block text-[11px] font-bold text-moisha-muted">
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">
               Cleaner Cost ($)
-            </label>
+            </span>
             <input
               type="number"
               min={0}
@@ -179,11 +179,11 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
               }
               className="field min-h-9 px-2.5 text-xs font-bold"
             />
-          </div>
-          <div>
-            <label className="mb-1 block text-[11px] font-bold text-moisha-muted">
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-bold text-moisha-muted">
               Fixed Cost ($/nt)
-            </label>
+            </span>
             <input
               type="number"
               min={0}
@@ -195,7 +195,7 @@ export const RevenueCalculator: React.FC<RevenueCalculatorProps> = ({
               }
               className="field min-h-9 px-2.5 text-xs font-bold"
             />
-          </div>
+          </label>
         </div>
       </div>
 

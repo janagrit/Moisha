@@ -81,6 +81,7 @@ export const RuleEngineCard: React.FC<RuleEngineCardProps> = ({
                 <input
                   type="number"
                   min={0}
+                  aria-label={`${rule.title} ${rule.parameterName}`}
                   disabled={!rule.enabled}
                   value={rule.parameterValue}
                   onChange={(e) => onUpdateParam(rule.id, Math.max(0, Number(e.target.value) || 0))}
@@ -105,6 +106,7 @@ export const RuleEngineCard: React.FC<RuleEngineCardProps> = ({
             <input
               type="number"
               min={40}
+              aria-label="Base Nightly Rate"
               value={house.currentPrice}
               onChange={(e) =>
                 onUpdateHouse({ currentPrice: Math.max(40, Number(e.target.value) || 40) })
@@ -125,6 +127,7 @@ export const RuleEngineCard: React.FC<RuleEngineCardProps> = ({
             <input
               type="number"
               min={40}
+              aria-label="Host Safety Floor"
               value={house.floorPrice}
               onChange={(e) =>
                 onUpdateHouse({ floorPrice: Math.max(40, Number(e.target.value) || 40) })
@@ -145,12 +148,14 @@ export const RuleEngineCard: React.FC<RuleEngineCardProps> = ({
           <div className="mt-1 grid grid-cols-2 gap-1.5">
             <input
               type="date"
+              aria-label="Gap start date"
               value={house.unbookedStartDate}
               onChange={(e) => handleDateChange(e.target.value, house.unbookedEndDate)}
               className="rounded-lg border border-moisha-border bg-white px-2 py-1 text-[11px] font-semibold text-moisha-navy"
             />
             <input
               type="date"
+              aria-label="Gap end date"
               value={house.unbookedEndDate}
               onChange={(e) => handleDateChange(house.unbookedStartDate, e.target.value)}
               className="rounded-lg border border-moisha-border bg-white px-2 py-1 text-[11px] font-semibold text-moisha-navy"

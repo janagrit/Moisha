@@ -6,13 +6,14 @@ import {
   getEffectiveFloorPrice,
   generateLocalChatReply,
   daysBetweenIso,
+  computeQuantile,
 } from '../services/pricingEngine';
 import {
   loadPersistedState,
   savePersistedState,
   clearPersistedState,
 } from '../services/storageService';
-import { PropertyHouse, PricingRule } from '../types';
+import { PropertyHouse, PricingRule, sanitizeExternalUrl } from '../types';
 
 describe('Moisha deterministic pricing engine', () => {
   const houses = createInitialHouses(new Date('2026-11-21T12:00:00Z'));
@@ -139,6 +140,16 @@ describe('Moisha deterministic pricing engine', () => {
     expect(daysBetweenIso('2026-11-21', '2026-11-26')).toBe(5);
     expect(daysBetweenIso('2026-11-26', '2026-11-21')).toBe(0);
     expect(daysBetweenIso('invalid', '2026-11-26')).toBe(0);
+  });
+
+  it('sanitizes untrusted external URLs and clamps quantile bounds', () => {
+    expect(sanitizeExternalUrl('javascript:alert(1)')).toBe('https://www.airbnb.com');
+    expect(sanitizeExternalUrl('data:text/html,hi')).toBe('https://www.airbnb.com');
+    expect(sanitizeExternalUrl('https://www.airbnb.com/rooms/123')).toBe(
+      'https://www.airbnb.com/rooms/123',
+    );
+    expect(computeQuantile([200, 250, 300], -1)).toBe(200);
+    expect(computeQuantile([200, 250, 300], 5)).toBe(300);
   });
 });
 

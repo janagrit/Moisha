@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Volume2, VolumeX, RotateCcw, Sparkles, ShieldCheck } from 'lucide-react';
 import { AiSettings } from '../types';
 
@@ -23,6 +23,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [keyInput, setKeyInput] = useState(aiSettings.customApiKey);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSave = (e: React.FormEvent) => {
@@ -32,12 +43,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-dialog-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
+    >
       <div className="w-full max-w-md rounded-2xl border border-moisha-border bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-moisha-royal" />
-            <h3 className="text-base font-bold text-moisha-navy">AI Engine & App Settings</h3>
+            <h3 id="settings-dialog-title" className="text-base font-bold text-moisha-navy">
+              AI Engine & App Settings
+            </h3>
           </div>
           <button
             type="button"
@@ -50,7 +68,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         <form onSubmit={handleSave} className="space-y-4">
-          {/* Connection Status */}
           <div className="rounded-xl border border-moisha-border bg-moisha-sand p-3.5 text-xs">
             <div className="flex items-center justify-between font-bold text-moisha-navy">
               <span>Server .env Gemini Bridge</span>
@@ -58,7 +75,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className={`rounded-full px-2 py-0.5 text-[10px] ${
                   proxyAvailable
                     ? 'bg-moisha-mint text-moisha-green'
-                    : 'bg-white text-moisha-muted border border-moisha-border'
+                    : 'border border-moisha-border bg-white text-moisha-muted'
                 }`}
               >
                 {proxyAvailable ? `Connected (${proxyModel})` : 'Static / Offline Mode'}
@@ -71,12 +88,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </p>
           </div>
 
-          {/* Engine Mode */}
           <div>
-            <label className="label">Pricing Advisor Mode</label>
+            <span className="label">Pricing Advisor Mode</span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
+                aria-pressed={aiSettings.mode === 'auto'}
                 onClick={() => onUpdateSettings({ mode: 'auto' })}
                 className={`rounded-xl border p-2.5 text-left text-xs transition-all ${
                   aiSettings.mode === 'auto'
@@ -92,6 +109,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
               <button
                 type="button"
+                aria-pressed={aiSettings.mode === 'local_only'}
                 onClick={() => onUpdateSettings({ mode: 'local_only' })}
                 className={`rounded-xl border p-2.5 text-left text-xs transition-all ${
                   aiSettings.mode === 'local_only'
@@ -107,7 +125,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* Optional Personal Key */}
           <div>
             <label htmlFor="custom-gemini-key" className="label">
               Personal Gemini API Key (Optional for Static Deploy)
@@ -126,7 +143,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </p>
           </div>
 
-          {/* Sound Toggle */}
           <div className="flex items-center justify-between rounded-xl border border-moisha-border bg-moisha-sand/70 px-3.5 py-2.5 text-xs">
             <span className="flex items-center gap-2 font-semibold text-moisha-navy">
               {aiSettings.soundEnabled ? (
@@ -138,6 +154,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </span>
             <button
               type="button"
+              aria-pressed={aiSettings.soundEnabled}
               onClick={() => onUpdateSettings({ soundEnabled: !aiSettings.soundEnabled })}
               className="rounded-lg border border-moisha-border bg-white px-2.5 py-1 text-[11px] font-bold text-moisha-navy"
             >
@@ -145,7 +162,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
 
-          {/* Footer Actions */}
           <div className="flex items-center justify-between border-t border-moisha-border pt-4">
             <button
               type="button"

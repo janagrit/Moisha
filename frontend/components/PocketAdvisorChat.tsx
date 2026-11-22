@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send, Sparkles, Zap, User } from 'lucide-react';
 import { PropertyHouse, AgentDecision, ChatMessage, AiSettings } from '../types';
 import { askMoishaAdvisor } from '../services/aiService';
@@ -14,8 +14,8 @@ interface PocketAdvisorChatProps {
 function createOpeningMessage(house: PropertyHouse, decision: AgentDecision): ChatMessage {
   const actionLabel =
     decision.direction === 'raise'
-      ? `Raise rate to $${decision.recommendedPrice}/nt`
-      : `Drop rate to $${decision.recommendedPrice}/nt`;
+      ? `Raise Rate to $${decision.recommendedPrice}/nt`
+      : `Drop Rate to $${decision.recommendedPrice}/nt`;
 
   return {
     id: `msg-init-${house.id}`,
@@ -50,12 +50,14 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
   ]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
+  const mountedRef = useRef(true);
 
-  // Reset opening advisor context when switching properties
   useEffect(() => {
-    setMessages([createOpeningMessage(house, decision)]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [house.id]);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const presets = [
     'Should I run a promo badge or adjust base price?',
@@ -86,6 +88,7 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
         aiSettings,
         proxyAvailable,
       );
+      if (!mountedRef.current) return;
       setMessages((prev) => [
         ...prev,
         {
@@ -97,7 +100,9 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
         },
       ]);
     } finally {
-      setIsThinking(false);
+      if (mountedRef.current) {
+        setIsThinking(false);
+      }
     }
   };
 
@@ -106,7 +111,6 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
       aria-label="Pocket advisor chat"
       className="card flex h-[520px] flex-col justify-between p-6"
     >
-      {/* Header */}
       <div className="flex items-center justify-between border-b border-moisha-border pb-3.5">
         <div className="flex items-center gap-2.5">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-amber-300 bg-moisha-butter text-lg">
@@ -124,13 +128,12 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
         </span>
       </div>
 
-      {/* Quick Chips */}
       <div className="flex flex-wrap gap-1.5 py-2.5">
         {presets.map((preset) => (
           <button
             key={preset}
             type="button"
-            onClick={() => handleSend(preset)}
+            onClick={() => void handleSend(preset)}
             className="rounded-full border border-moisha-border bg-moisha-sand px-3 py-1 text-[11px] font-medium text-moisha-navy transition-colors hover:border-amber-300 hover:bg-moisha-butter"
           >
             {preset}
@@ -138,7 +141,6 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
         ))}
       </div>
 
-      {/* Messages */}
       <div className="flex-1 space-y-3 overflow-y-auto py-2 pr-1">
         {messages.map((m) => {
           const isAi = m.role === 'assistant';
@@ -206,11 +208,10 @@ export const PocketAdvisorChat: React.FC<PocketAdvisorChatProps> = ({
         )}
       </div>
 
-      {/* Input */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          handleSend();
+          void handleSend();
         }}
         className="flex items-center gap-2 border-t border-moisha-border pt-3"
       >

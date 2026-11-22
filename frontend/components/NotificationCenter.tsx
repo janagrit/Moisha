@@ -70,6 +70,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             <button
               key={ch.id}
               type="button"
+              aria-pressed={activeChannel === ch.id}
               onClick={() => setActiveChannel(ch.id)}
               className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition-colors ${
                 activeChannel === ch.id
@@ -112,6 +113,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
           <div className="mt-4 flex items-center gap-2 border-t border-moisha-border pt-3">
             <input
               type="text"
+              aria-label="Custom alert message"
               placeholder="Optional custom note..."
               value={customMsg}
               onChange={(e) => setCustomMsg(e.target.value)}

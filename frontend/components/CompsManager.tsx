@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ExternalLink, Star, Plus, Trash2, RefreshCw, MapPin, X } from 'lucide-react';
-import { ListingComp, PropertyHouse } from '../types';
+import { ListingComp, PropertyHouse, sanitizeExternalUrl } from '../types';
 
 interface CompsManagerProps {
   house: PropertyHouse;
@@ -29,6 +29,17 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
   const [newBeds, setNewBeds] = useState(String(house.bedrooms));
   const [newRating, setNewRating] = useState('4.90');
 
+  useEffect(() => {
+    if (!showAddModal) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowAddModal(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showAddModal]);
+
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
@@ -37,7 +48,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
     onAddComp({
       name: newName.trim(),
       address: newAddress.trim() || house.neighborhood,
-      airbnbUrl: newUrl.trim() || 'https://www.airbnb.com',
+      airbnbUrl: sanitizeExternalUrl(newUrl),
       bedrooms: Math.max(0, Number(newBeds) || house.bedrooms),
       bathrooms: house.bathrooms,
       rating: Math.min(5, Math.max(1, Number(newRating) || 4.9)),
@@ -58,14 +69,13 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
 
   return (
     <section aria-label="Comparable neighbor listings" className="card p-6">
-      {/* Header */}
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base font-bold text-moisha-navy">
               Comparable Neighbors Around {house.address.split(',')[0]}
             </h3>
-            <span className="rounded-full bg-moisha-sand px-2.5 py-0.5 text-xs font-bold text-moisha-navy border border-moisha-border">
+            <span className="rounded-full border border-moisha-border bg-moisha-sand px-2.5 py-0.5 text-xs font-bold text-moisha-navy">
               {comps.length} tracked
             </span>
           </div>
@@ -96,7 +106,6 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
         </div>
       </div>
 
-      {/* Comps Grid */}
       {comps.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-moisha-border bg-moisha-sand p-8 text-center text-xs text-moisha-muted">
           No comparable listings tracked yet. Click <strong>Add Neighbor</strong> to benchmark your nightly rate.
@@ -156,6 +165,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
 
                     <button
                       type="button"
+                      aria-pressed={comp.isBooked}
                       onClick={() => onUpdateComp(comp.id, { isBooked: !comp.isBooked })}
                       className={`rounded-lg border px-2 py-0.5 text-[10px] font-bold transition-colors ${
                         comp.isBooked
@@ -167,7 +177,6 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                     </button>
                   </div>
 
-                  {/* Price Row */}
                   <div className="my-2 flex items-center justify-between">
                     <div>
                       <span className="block text-[10px] font-bold text-moisha-muted uppercase">
@@ -202,11 +211,11 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                   </div>
                 </div>
 
-                {/* Quick Adjust Controls */}
                 <div className="mt-2 flex items-center justify-between border-t border-moisha-border pt-2">
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
+                      aria-label={`Decrease ${comp.name} rate by $15`}
                       onClick={() =>
                         onUpdateComp(comp.id, {
                           currentPrice: Math.max(95, comp.currentPrice - 15),
@@ -218,6 +227,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                     </button>
                     <button
                       type="button"
+                      aria-label={`Increase ${comp.name} rate by $15`}
                       onClick={() =>
                         onUpdateComp(comp.id, { currentPrice: comp.currentPrice + 15 })
                       }
@@ -228,9 +238,9 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                   </div>
 
                   <a
-                    href={comp.airbnbUrl}
+                    href={sanitizeExternalUrl(comp.airbnbUrl)}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-[11px] font-semibold text-moisha-royal hover:underline"
                   >
                     <span>Listing</span>
@@ -243,13 +253,19 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
         </div>
       )}
 
-      {/* Add Comp Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-comp-dialog-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
+        >
           <div className="w-full max-w-md rounded-2xl border border-moisha-border bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-moisha-navy">Add Neighbor Comp</h3>
+                <h3 id="add-comp-dialog-title" className="text-base font-bold text-moisha-navy">
+                  Add Neighbor Comp
+                </h3>
                 <p className="text-xs text-moisha-muted">
                   Track a competing rental near {house.nickname}.
                 </p>
@@ -257,7 +273,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                aria-label="Close modal"
+                aria-label="Close add comp modal"
                 className="rounded-lg p-1 text-moisha-muted hover:bg-moisha-sand"
               >
                 <X className="h-4 w-4" />
@@ -265,8 +281,8 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
             </div>
 
             <form onSubmit={handleCreate} className="space-y-3">
-              <div>
-                <label className="label">Listing Name *</label>
+              <label className="block">
+                <span className="label">Listing Name *</span>
                 <input
                   type="text"
                   required
@@ -275,10 +291,10 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                   onChange={(e) => setNewName(e.target.value)}
                   className="field text-sm"
                 />
-              </div>
+              </label>
 
-              <div>
-                <label className="label">Street / Distance Note</label>
+              <label className="block">
+                <span className="label">Street / Distance Note</span>
                 <input
                   type="text"
                   placeholder="e.g. 2 doors down"
@@ -286,10 +302,10 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                   onChange={(e) => setNewAddress(e.target.value)}
                   className="field text-sm"
                 />
-              </div>
+              </label>
 
-              <div>
-                <label className="label">Listing URL (optional)</label>
+              <label className="block">
+                <span className="label">Listing URL (optional)</span>
                 <input
                   type="url"
                   placeholder="https://www.airbnb.com/rooms/..."
@@ -297,11 +313,11 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                   onChange={(e) => setNewUrl(e.target.value)}
                   className="field text-sm"
                 />
-              </div>
+              </label>
 
               <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="label">Price ($/nt)</label>
+                <label className="block">
+                  <span className="label">Price ($/nt)</span>
                   <input
                     type="number"
                     min={50}
@@ -309,9 +325,9 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                     onChange={(e) => setNewPrice(e.target.value)}
                     className="field text-sm"
                   />
-                </div>
-                <div>
-                  <label className="label">Bedrooms</label>
+                </label>
+                <label className="block">
+                  <span className="label">Bedrooms</span>
                   <input
                     type="number"
                     min={0}
@@ -319,9 +335,9 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                     onChange={(e) => setNewBeds(e.target.value)}
                     className="field text-sm"
                   />
-                </div>
-                <div>
-                  <label className="label">Rating</label>
+                </label>
+                <label className="block">
+                  <span className="label">Rating</span>
                   <input
                     type="number"
                     step="0.01"
@@ -331,7 +347,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
                     onChange={(e) => setNewRating(e.target.value)}
                     className="field text-sm"
                   />
-                </div>
+                </label>
               </div>
 
               <div className="flex justify-end gap-2 border-t border-moisha-border pt-4">
