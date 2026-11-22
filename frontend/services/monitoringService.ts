@@ -4,11 +4,13 @@ import {
   CompetitorListing,
   PriceChangeEvent,
 } from '../types';
+import { createPrototypeMonitoringState } from './prototypeData';
 
-const STORAGE_KEY = 'moisha_competitor_monitor_v1';
+const STORAGE_KEY = 'moisha_competitor_monitor_v2';
 
 export function createInitialMonitoringState(): MonitoringState {
   return {
+    isPrototype: false,
     property: null,
     competitors: [],
     priceChanges: [],
@@ -25,11 +27,11 @@ export function createInitialMonitoringState(): MonitoringState {
 export function loadMonitoringState(): MonitoringState {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return createInitialMonitoringState();
+    if (!raw) return createPrototypeMonitoringState();
     const parsed = MonitoringStateSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : createInitialMonitoringState();
+    return parsed.success ? parsed.data : createPrototypeMonitoringState();
   } catch {
-    return createInitialMonitoringState();
+    return createPrototypeMonitoringState();
   }
 }
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { HostProperty } from '../types';
 import {
   parseAirbnbListingUrl,
@@ -9,16 +9,26 @@ import {
 
 interface PropertyOnboardingProps {
   onRegisterProperty: (property: HostProperty) => void;
+  onLoadPrototype?: () => void;
 }
 
-const BEDROOM_CHOICES = [1, 2, 3, 4, 5];
+const BEDROOM_OPTIONS: Array<{ label: string; value: number }> = [
+  { label: 'Studio', value: 0 },
+  { label: '1', value: 1 },
+  { label: '2', value: 2 },
+  { label: '3', value: 3 },
+  { label: '4', value: 4 },
+  { label: '5+', value: 5 },
+];
 
 export const PropertyOnboarding: React.FC<PropertyOnboardingProps> = ({
   onRegisterProperty,
+  onLoadPrototype,
 }) => {
   const [airbnbUrl, setAirbnbUrl] = useState('');
   const [locationInput, setLocationInput] = useState('');
   const [bedrooms, setBedrooms] = useState<number>(3);
+  const [nightlyPrice, setNightlyPrice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -45,17 +55,21 @@ export const PropertyOnboarding: React.FC<PropertyOnboardingProps> = ({
       }
 
       const resolvedBedrooms =
-        typeof preview.bedrooms === 'number' && preview.bedrooms > 0
+        typeof preview.bedrooms === 'number' && preview.bedrooms >= 0
           ? preview.bedrooms
           : bedrooms;
 
       const defaultName =
         preview.name ||
         (locationResult.city && !locationResult.city.startsWith('ZIP ')
-          ? `${resolvedBedrooms}-Bedroom Home in ${locationResult.city}`
+          ? resolvedBedrooms === 0
+            ? `Studio in ${locationResult.city}`
+            : `${resolvedBedrooms}-Bedroom Home in ${locationResult.city}`
           : parsedAirbnb.roomId
             ? `Airbnb Listing #${parsedAirbnb.roomId}`
             : `${resolvedBedrooms}-Bedroom Airbnb`);
+
+      const parsedPrice = nightlyPrice.trim() ? Math.round(Number(nightlyPrice)) : null;
 
       const created: HostProperty = {
         id: `prop-${Date.now()}`,
@@ -73,7 +87,7 @@ export const PropertyOnboarding: React.FC<PropertyOnboardingProps> = ({
         bedrooms: resolvedBedrooms,
         bathrooms: preview.bathrooms,
         guestCapacity: preview.guestCapacity,
-        nightlyPrice: null,
+        nightlyPrice: parsedPrice && parsedPrice > 0 ? parsedPrice : null,
         photoUrl: preview.photoUrl,
         amenities: [],
         createdAt: new Date().toISOString(),
@@ -86,14 +100,27 @@ export const PropertyOnboarding: React.FC<PropertyOnboardingProps> = ({
   };
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-12 sm:py-20">
+    <div className="mx-auto max-w-lg px-4 py-10 sm:py-16">
+      {onLoadPrototype && (
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={onLoadPrototype}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Back to live prototype (Washington, DC 20002)</span>
+          </button>
+        </div>
+      )}
+
       <div className="surface p-6 sm:p-8">
         <div className="mb-6">
           <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-            Monitor competitors near your Airbnb
+            Register your US Airbnb listing
           </h1>
           <p className="mt-1.5 text-sm text-slate-500">
-            Register your US listing once to track comparable neighborhood properties and daily price changes.
+            Enter your listing once to benchmark comparable properties and track neighbor rate changes.
           </p>
         </div>
 
@@ -131,7 +158,7 @@ export const PropertyOnboarding: React.FC<PropertyOnboardingProps> = ({
               id="onboard-location"
               type="text"
               required
-              placeholder="e.g. 78704 or 1500 S Congress Ave, Austin, TX"
+              placeholder="e.g. 20002 or 1114 Florida Ave NE, Washington, DC"
               value={locationInput}
               onChange={(e) => setLocationInput(e.target.value)}
               className="input-field"
@@ -139,36 +166,59 @@ export const PropertyOnboarding: React.FC<PropertyOnboardingProps> = ({
           </div>
 
           <div>
-            <label htmlFor="onboard-bedrooms" className="field-label">
-              Bedrooms
-            </label>
+            <span className="field-label">Bedrooms</span>
             <div className="grid grid-cols-6 gap-2">
-              {BEDROOM_CHOICES.map((num) => (
-                <button
-                  key={num}
-                  type="button"
-                  aria-pressed={bedrooms === num}
-                  onClick={() => setBedrooms(num)}
-                  className={`h-11 rounded-xl border text-sm font-semibold transition-colors ${
-                    bedrooms === num
-                      ? 'border-slate-900 bg-slate-900 text-white'
-                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {num}
-                </button>
-              ))}
-              <input
-                id="onboard-bedrooms"
-                type="number"
-                min={0}
-                max={20}
-                aria-label="Custom number of bedrooms"
-                value={bedrooms}
-                onChange={(e) => setBedrooms(Math.max(0, Math.min(20, Number(e.target.value) || 0)))}
-                className="input-field text-center font-semibold tabular"
-              />
+              {BEDROOM_OPTIONS.map((opt) => {
+                const isSelected =
+                  opt.value === 5 ? bedrooms >= 5 : bedrooms === opt.value;
+                return (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => setBedrooms(opt.value)}
+                    className={`h-10 rounded-xl border text-xs font-semibold transition-colors sm:text-sm ${
+                      isSelected
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
+            {bedrooms >= 5 && (
+              <div className="mt-2.5">
+                <label htmlFor="onboard-bedrooms" className="sr-only">
+                  Exact bedroom count
+                </label>
+                <input
+                  id="onboard-bedrooms"
+                  type="number"
+                  min={5}
+                  max={20}
+                  value={bedrooms}
+                  onChange={(e) => setBedrooms(Math.max(5, Math.min(20, Number(e.target.value) || 5)))}
+                  className="input-field w-28 tabular"
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="onboard-my-price" className="field-label">
+              My current nightly price ($, optional)
+            </label>
+            <input
+              id="onboard-my-price"
+              type="number"
+              min={10}
+              placeholder="e.g. 245"
+              value={nightlyPrice}
+              onChange={(e) => setNightlyPrice(e.target.value)}
+              className="input-field tabular"
+            />
           </div>
 
           <button

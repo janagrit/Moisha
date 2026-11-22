@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronRight,
   ArrowUpDown,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   HostProperty,
@@ -21,6 +22,7 @@ import { buildComparableAirbnbSearchUrl } from '../services/usLocationService';
 
 interface CompetitorListingsSectionProps {
   property: HostProperty;
+  isPrototype: boolean;
   primary: EvaluatedCompetitor[];
   secondary: EvaluatedCompetitor[];
   excluded: EvaluatedCompetitor[];
@@ -80,6 +82,7 @@ function formatDiffBadge(diffDollar: number | null, diffPct: number | null): Rea
 
 export const CompetitorListingsSection: React.FC<CompetitorListingsSectionProps> = ({
   property,
+  isPrototype,
   primary,
   secondary,
   excluded,
@@ -89,7 +92,8 @@ export const CompetitorListingsSection: React.FC<CompetitorListingsSectionProps>
 }) => {
   const [sortBy, setSortBy] = useState<CompetitorSortField>('price_asc');
   const [showSecondary, setShowSecondary] = useState(false);
-  const [showExcluded, setShowExcluded] = useState(false);
+  const [showExcluded, setShowExcluded] = useState(isPrototype);
+  const [failedPhotos, setFailedPhotos] = useState<Record<string, boolean>>({});
 
   const sortedPrimary = useMemo(() => sortCompetitors(primary, sortBy), [primary, sortBy]);
   const sortedSecondary = useMemo(() => sortCompetitors(secondary, sortBy), [secondary, sortBy]);
@@ -107,15 +111,17 @@ export const CompetitorListingsSection: React.FC<CompetitorListingsSectionProps>
         : 'Baths unavailable';
     const guestText =
       listing.guestCapacity !== null ? `${listing.guestCapacity} guests` : 'Unavailable';
+    const hasPhoto = Boolean(listing.photoUrl && !failedPhotos[listing.id]);
 
     return (
       <tr key={listing.id} className="group hover:bg-slate-50/70">
         <td className="py-3.5 pr-4 pl-6">
           <div className="flex items-center gap-3.5">
-            {listing.photoUrl ? (
+            {hasPhoto ? (
               <img
                 src={sanitizeExternalUrl(listing.photoUrl)}
                 alt={listing.name}
+                onError={() => setFailedPhotos((prev) => ({ ...prev, [listing.id]: true }))}
                 className="h-11 w-16 shrink-0 rounded-lg border border-slate-200 object-cover"
               />
             ) : (
@@ -128,6 +134,9 @@ export const CompetitorListingsSection: React.FC<CompetitorListingsSectionProps>
                 {listing.name}
               </div>
               <div className="truncate text-xs text-slate-500">
+                {listing.locationNote
+                  ? `${listing.locationNote} · `
+                  : ''}
                 {listing.amenities.length > 0
                   ? listing.amenities
                       .slice(0, 3)
@@ -228,15 +237,17 @@ export const CompetitorListingsSection: React.FC<CompetitorListingsSectionProps>
             listing.guestCapacity !== null
               ? `${listing.guestCapacity} guests`
               : 'Guests unavailable';
+          const hasPhoto = Boolean(listing.photoUrl && !failedPhotos[listing.id]);
 
           return (
             <div key={listing.id} className="space-y-3 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  {listing.photoUrl ? (
+                  {hasPhoto ? (
                     <img
                       src={sanitizeExternalUrl(listing.photoUrl)}
                       alt={listing.name}
+                      onError={() => setFailedPhotos((prev) => ({ ...prev, [listing.id]: true }))}
                       className="h-12 w-16 shrink-0 rounded-lg border border-slate-200 object-cover"
                     />
                   ) : (
@@ -302,20 +313,20 @@ export const CompetitorListingsSection: React.FC<CompetitorListingsSectionProps>
     property.propertyType === 'studio'
       ? `Studios near ${property.neighborhood}`
       : property.propertyType === 'entire_home'
-        ? `${property.bedrooms}-bedroom entire homes near ${property.neighborhood} (studios and private rooms excluded)`
+        ? `${property.bedrooms}-bedroom entire homes near ${property.neighborhood} (1BRs, studios & private rooms excluded)`
         : `${property.bedrooms}-bedroom comparable listings near ${property.neighborhood}`;
 
   const browseLabel =
     property.propertyType === 'studio'
-      ? 'Browse studios on Airbnb'
-      : `Browse ${property.bedrooms}BR on Airbnb`;
+      ? 'Airbnb studios'
+      : `Airbnb ${property.bedrooms}BR map`;
 
   return (
     <section aria-label="Competitor listings" className="space-y-4">
       <div className="surface overflow-hidden">
         {/* Section Header */}
-        <div className="flex flex-col justify-between gap-4 border-b border-slate-100 p-6 sm:flex-row sm:items-center">
-          <div>
+        <div className="flex flex-col justify-between gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-center">
+          <div className="min-w-0">
             <div className="flex items-center gap-2.5">
               <h2 className="text-lg font-semibold tracking-tight text-slate-900">
                 Comparable listings
@@ -327,7 +338,7 @@ export const CompetitorListingsSection: React.FC<CompetitorListingsSectionProps>
             <p className="mt-0.5 text-sm text-slate-500">{targetSubtitle}</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             {(primary.length > 1 || secondary.length > 1) && (
               <div className="relative flex items-center">
                 <ArrowUpDown className="pointer-events-none absolute left-3 h-3.5 w-3.5 text-slate-400" />
@@ -375,7 +386,7 @@ export const CompetitorListingsSection: React.FC<CompetitorListingsSectionProps>
                 : `No ${property.bedrooms}-bedroom comparable competitors added yet`}
             </p>
             <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-slate-500 sm:text-sm">
-              Open Airbnb pre-filtered to comparable listings in {property.neighborhood}, then add the nearby properties you compete against.
+              Open Airbnb for {property.neighborhood}, copy the search results (`Cmd+A, Cmd+C`), and click <strong>Add competitor</strong> to paste and auto-filter them in seconds.
             </p>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
               <a
@@ -434,18 +445,21 @@ export const CompetitorListingsSection: React.FC<CompetitorListingsSectionProps>
 
       {/* Excluded Non-Comparable Listings Notice (Studios / Private Rooms / >=2 BR mismatch) */}
       {excluded.length > 0 && (
-        <div className="surface overflow-hidden border-slate-200/70 bg-slate-50/40">
+        <div className="surface overflow-hidden border-slate-200/80 bg-slate-50/50">
           <button
             type="button"
             aria-expanded={showExcluded}
             onClick={() => setShowExcluded((v) => !v)}
             className="flex w-full items-center justify-between px-6 py-3.5 text-left"
           >
-            <div className="text-xs text-slate-500">
-              <strong className="font-semibold text-slate-700">
-                Excluded non-comparable listings ({excluded.length})
-              </strong>{' '}
-              — Studios, private rooms, and listings differing by 2+ bedrooms are kept out of your benchmark.
+            <div className="flex items-center gap-2 text-xs text-slate-600">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span>
+                <strong className="font-semibold text-slate-800">
+                  Excluded non-comparable listings ({excluded.length})
+                </strong>{' '}
+                — Kept out of your {property.bedrooms}BR average so smaller apartments & studios never skew your price.
+              </span>
             </div>
             {showExcluded ? (
               <ChevronDown className="h-4 w-4 text-slate-400" />
@@ -459,11 +473,16 @@ export const CompetitorListingsSection: React.FC<CompetitorListingsSectionProps>
               {excluded.map(({ listing, matchReason }) => (
                 <div
                   key={listing.id}
-                  className="flex items-center justify-between gap-3 py-3 text-xs"
+                  className="flex flex-wrap items-center justify-between gap-3 py-3 text-xs"
                 >
                   <div>
                     <span className="font-semibold text-slate-800">{listing.name}</span>
-                    <span className="ml-2 text-slate-500">{matchReason}</span>
+                    <span className="ml-2 font-medium text-slate-500 tabular">
+                      (${listing.nightlyPrice}/nt)
+                    </span>
+                    <span className="ml-2 rounded-md bg-slate-100 px-2 py-0.5 text-slate-600">
+                      {matchReason}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button

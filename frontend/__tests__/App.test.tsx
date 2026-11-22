@@ -3,7 +3,7 @@ import { render, screen, fireEvent, cleanup, within } from '@testing-library/rea
 import App from '../App';
 import { US_ONLY_ERROR_MESSAGE } from '../services/usLocationService';
 
-describe('Moisha competitor-monitoring dashboard', () => {
+describe('Moisha competitor-monitoring prototype & dashboard', () => {
   beforeEach(() => {
     window.localStorage.clear();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -46,8 +46,28 @@ describe('Moisha competitor-monitoring dashboard', () => {
     vi.restoreAllMocks();
   });
 
-  it('rejects non-US properties with the exact required message', async () => {
+  it('opens immediately on the interactive DC 20002 prototype and previews morning email alerts', () => {
     render(<App />);
+
+    expect(screen.getByText('H St Corridor Brick Rowhouse')).toBeTruthy();
+    expect(screen.getAllByText('Row home with a fire pit near H St').length).toBeGreaterThanOrEqual(
+      1,
+    );
+    expect(screen.getByText('-16.8%')).toBeTruthy();
+    expect(screen.getByText(/Excluded non-comparable listings \(2\)/i)).toBeTruthy();
+
+    // Open morning email alert preview
+    fireEvent.click(screen.getByRole('button', { name: /Preview email alert/i }));
+    const emailDialog = screen.getByRole('dialog');
+    expect(
+      within(emailDialog).getByText(/Morning price-change email alert/i),
+    ).toBeTruthy();
+  });
+
+  it('switches to custom listing setup and rejects non-US properties with the exact required message', async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Use my Airbnb/i }));
 
     fireEvent.change(screen.getByLabelText(/Airbnb listing URL/i), {
       target: { value: 'https://www.airbnb.com/rooms/12345678' },
@@ -61,8 +81,10 @@ describe('Moisha competitor-monitoring dashboard', () => {
     expect(alert.textContent).toContain(US_ONLY_ERROR_MESSAGE);
   });
 
-  it('registers a US property, filters comparable vs non-comparable listings, and tracks price changes', async () => {
+  it('registers a US property, imports pasted Airbnb search text, sorts comparables, and tracks price changes', async () => {
     render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Use my Airbnb/i }));
 
     fireEvent.change(screen.getByLabelText(/Airbnb listing URL/i), {
       target: { value: 'https://www.airbnb.com/rooms/55555555' },
@@ -70,48 +92,26 @@ describe('Moisha competitor-monitoring dashboard', () => {
     fireEvent.change(screen.getByLabelText(/Property address or US ZIP code/i), {
       target: { value: '1500 S Congress Ave, Austin, TX 78704' },
     });
-    // Default selected bedroom pill is 3
-    fireEvent.click(screen.getByRole('button', { name: /Continue to dashboard/i }));
-
-    // Dashboard renders My Property
-    expect(await screen.findByText(/3-Bedroom Home in Austin/i)).toBeTruthy();
-
-    // Set my nightly price inline
-    fireEvent.change(screen.getByLabelText(/Set my current nightly price/i), {
+    fireEvent.change(screen.getByLabelText(/My current nightly price/i), {
       target: { value: '275' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /Set price/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Continue to dashboard/i }));
+
+    expect(await screen.findByText(/3-Bedroom Home in Austin/i)).toBeTruthy();
     expect(screen.getByText('$275')).toBeTruthy();
 
-    // Add a genuinely comparable 3BR entire home
-    fireEvent.click(screen.getByRole('button', { name: /Add first competitor/i }));
-    const dialog1 = screen.getByRole('dialog');
-    fireEvent.change(within(dialog1).getByLabelText(/Airbnb listing URL \*/i), {
-      target: { value: 'https://www.airbnb.com/rooms/77777777' },
+    // Paste copied Airbnb search text with two 3BRs + one non-comparable 1BR
+    fireEvent.click(screen.getByRole('button', { name: /Add or paste competitors/i }));
+    const compDialog = screen.getByRole('dialog');
+    fireEvent.click(within(compDialog).getByRole('button', { name: /Paste Airbnb page/i }));
+    fireEvent.change(within(compDialog).getByLabelText(/Copied Airbnb search text/i), {
+      target: {
+        value: `Home in Austin\nTravis Heights 3BR House\n3 bedrooms · 2.5 baths\n$250 for 1 night\n\nHome in Austin\nBouldin Creek 3BR Villa\n3 bedrooms · 3 baths\n$310 for 1 night\n\nApartment in Austin\nDowntown 1BR Loft\n1 bedroom · 1 bath\n$140 for 1 night`,
+      },
     });
-    fireEvent.change(within(dialog1).getByLabelText(/Property name/i), {
-      target: { value: 'Travis Heights 3BR House' },
-    });
-    fireEvent.change(within(dialog1).getByLabelText(/Nightly price \(\$\) \*/i), {
-      target: { value: '250' },
-    });
-    fireEvent.click(within(dialog1).getByRole('button', { name: /Save competitor/i }));
+    fireEvent.click(within(compDialog).getByRole('button', { name: /Import 3 listings/i }));
 
-    expect(screen.getAllByText('Travis Heights 3BR House').length).toBeGreaterThanOrEqual(1);
-
-    // Add a second 3BR comparable home so we can verify price sorting
-    fireEvent.click(screen.getAllByRole('button', { name: /^Add competitor$/i })[0]);
-    const dialogSecond = screen.getByRole('dialog');
-    fireEvent.change(within(dialogSecond).getByLabelText(/Airbnb listing URL \*/i), {
-      target: { value: 'https://www.airbnb.com/rooms/66666666' },
-    });
-    fireEvent.change(within(dialogSecond).getByLabelText(/Property name/i), {
-      target: { value: 'Bouldin Creek 3BR Villa' },
-    });
-    fireEvent.change(within(dialogSecond).getByLabelText(/Nightly price \(\$\) \*/i), {
-      target: { value: '310' },
-    });
-    fireEvent.click(within(dialogSecond).getByRole('button', { name: /Save competitor/i }));
+    expect(screen.getByText(/Excluded non-comparable listings \(1\)/i)).toBeTruthy();
 
     // Sort high to low and verify Bouldin Creek ($310) appears before Travis Heights ($250)
     const sortSelect = screen.getByLabelText(/Sort competitor listings/i);
@@ -120,26 +120,7 @@ describe('Moisha competitor-monitoring dashboard', () => {
     expect(rows[1].textContent).toContain('Bouldin Creek 3BR Villa');
     expect(rows[2].textContent).toContain('Travis Heights 3BR House');
 
-    // Add a Studio (should be excluded from primary comparable comparison)
-    fireEvent.click(screen.getAllByRole('button', { name: /^Add competitor$/i })[0]);
-    const dialog2 = screen.getByRole('dialog');
-    fireEvent.change(within(dialog2).getByLabelText(/Airbnb listing URL \*/i), {
-      target: { value: 'https://www.airbnb.com/rooms/88888888' },
-    });
-    fireEvent.change(within(dialog2).getByLabelText(/Property name/i), {
-      target: { value: 'Downtown Tiny Studio' },
-    });
-    fireEvent.change(within(dialog2).getByLabelText(/^Type$/i), {
-      target: { value: 'studio' },
-    });
-    fireEvent.change(within(dialog2).getByLabelText(/Nightly price \(\$\) \*/i), {
-      target: { value: '120' },
-    });
-    fireEvent.click(within(dialog2).getByRole('button', { name: /Save competitor/i }));
-
-    expect(screen.getByText(/Excluded non-comparable listings \(1\)/i)).toBeTruthy();
-
-    // Run a price check where Travis Heights 3BR drops from $250 -> $215
+    // Run a price check where Travis Heights 3BR drops from $250 -> $215 (-14.0%)
     fireEvent.click(screen.getByRole('button', { name: /^Check prices$/i }));
     const checkDialog = screen.getByRole('dialog');
     const checkInput = within(checkDialog).getByLabelText(
@@ -148,7 +129,6 @@ describe('Moisha competitor-monitoring dashboard', () => {
     fireEvent.change(checkInput, { target: { value: '215' } });
     fireEvent.click(within(checkDialog).getByRole('button', { name: /Save check/i }));
 
-    // Price changes feed now shows -14.0% drop
     expect(screen.getByText('-14.0%')).toBeTruthy();
   });
 });

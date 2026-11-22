@@ -22,6 +22,7 @@ import {
   loadMonitoringState,
   saveMonitoringState,
 } from '../services/monitoringService';
+import { parsePastedAirbnbSearchText } from '../services/prototypeData';
 
 const baseHost3BR: HostProperty = {
   id: 'host-1',
@@ -203,5 +204,42 @@ describe('Price change tracking & storage', () => {
     const reloaded = loadMonitoringState();
     expect(reloaded.priceChanges).toHaveLength(1);
     expect(reloaded.competitors[0].nightlyPrice).toBe(225);
+  });
+
+  it('parses copied Airbnb search page cards into structured listings', () => {
+    const pasted = `
+      Superhost
+      Home in Washington
+      5.0 (9)
+      Row home with a fire pit near H St
+      3 bedrooms · 4 queen beds · 2.5 baths
+      Dec 1 – 2
+      $183 for 1 night
+
+      Superhost
+      Apartment in Washington
+      4.88 (199)
+      Renovated garden-level near Union Market
+      1 bedroom · 1 queen bed · 1 bath
+      Dec 1 – 2
+      $166 for 1 night
+    `;
+
+    const parsed = parsePastedAirbnbSearchText(pasted);
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0]).toEqual({
+      name: 'Row home with a fire pit near H St',
+      propertyType: 'entire_home',
+      bedrooms: 3,
+      bathrooms: 2.5,
+      nightlyPrice: 183,
+    });
+    expect(parsed[1]).toEqual({
+      name: 'Renovated garden-level near Union Market',
+      propertyType: 'entire_home',
+      bedrooms: 1,
+      bathrooms: 1,
+      nightlyPrice: 166,
+    });
   });
 });

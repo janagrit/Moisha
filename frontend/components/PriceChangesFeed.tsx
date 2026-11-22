@@ -1,5 +1,13 @@
-import React from 'react';
-import { TrendingDown, TrendingUp, Home, ExternalLink, RefreshCw, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  TrendingDown,
+  TrendingUp,
+  Home,
+  ExternalLink,
+  RefreshCw,
+  Plus,
+  Mail,
+} from 'lucide-react';
 import { PriceChangeEvent, sanitizeExternalUrl } from '../types';
 import {
   formatShortDate,
@@ -10,18 +18,27 @@ import {
 interface PriceChangesFeedProps {
   changes: PriceChangeEvent[];
   hasCompetitors: boolean;
+  isPrototype: boolean;
+  isSimulatingCheck: boolean;
   lastCheckedAt: string | null;
+  onRunPrototypeCheck: () => void;
   onOpenCheckModal: () => void;
+  onOpenEmailModal: () => void;
   onOpenAddCompetitor: () => void;
 }
 
 export const PriceChangesFeed: React.FC<PriceChangesFeedProps> = ({
   changes,
   hasCompetitors,
+  isPrototype,
+  isSimulatingCheck,
   lastCheckedAt,
+  onRunPrototypeCheck,
   onOpenCheckModal,
+  onOpenEmailModal,
   onOpenAddCompetitor,
 }) => {
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   const checkDue = hasCompetitors && isDailyCheckDue(lastCheckedAt);
 
   return (
@@ -44,21 +61,35 @@ export const PriceChangesFeed: React.FC<PriceChangesFeedProps> = ({
             )}
           </div>
           <p className="mt-0.5 text-sm text-slate-500">
-            Observed nightly price increases and decreases · Last check:{' '}
+            Observed nightly rate drops and increases · Last check:{' '}
             <span className="font-medium text-slate-700">{formatTimestamp(lastCheckedAt)}</span>
           </p>
         </div>
 
-        {hasCompetitors && (
-          <button
-            type="button"
-            onClick={onOpenCheckModal}
-            className="btn-secondary h-9 px-3 text-xs sm:text-sm"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            <span>Record price check</span>
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {changes.length > 0 && (
+            <button
+              type="button"
+              onClick={onOpenEmailModal}
+              className="btn-secondary h-9 px-3 text-xs sm:text-sm"
+            >
+              <Mail className="h-3.5 w-3.5 text-slate-500" />
+              <span>Preview email alert</span>
+            </button>
+          )}
+
+          {hasCompetitors && (
+            <button
+              type="button"
+              onClick={isPrototype ? onRunPrototypeCheck : onOpenCheckModal}
+              disabled={isSimulatingCheck}
+              className="btn-secondary h-9 px-3 text-xs sm:text-sm"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isSimulatingCheck ? 'animate-spin' : ''}`} />
+              <span>{isPrototype ? 'Simulate next check' : 'Record price check'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {changes.length === 0 ? (
@@ -70,8 +101,8 @@ export const PriceChangesFeed: React.FC<PriceChangesFeedProps> = ({
           </p>
           <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-slate-500 sm:text-sm">
             {hasCompetitors
-              ? 'Run a daily price check whenever you inspect your neighborhood listings. Every rate increase or decrease will be logged here with timestamps.'
-              : 'Add comparable Airbnb listings in your neighborhood to start tracking their nightly rate movements.'}
+              ? 'Run a daily price check to compare today’s rates against stored previous prices. Every increase or decrease appears here with timestamps.'
+              : 'Paste or add comparable Airbnb listings in your neighborhood to start tracking their nightly rate movements.'}
           </p>
           <div className="mt-4">
             {hasCompetitors ? (
@@ -90,7 +121,7 @@ export const PriceChangesFeed: React.FC<PriceChangesFeedProps> = ({
                 className="btn-primary h-9 px-4 text-xs sm:text-sm"
               >
                 <Plus className="h-4 w-4" />
-                <span>Add first competitor</span>
+                <span>Add or paste competitors</span>
               </button>
             )}
           </div>
@@ -100,6 +131,7 @@ export const PriceChangesFeed: React.FC<PriceChangesFeedProps> = ({
           {changes.map((item) => {
             const isDecrease = item.deltaAmount < 0;
             const absPct = Math.abs(item.percentChange).toFixed(1);
+            const showImg = item.competitorPhotoUrl && !failedImages[item.id];
 
             return (
               <div
@@ -108,10 +140,13 @@ export const PriceChangesFeed: React.FC<PriceChangesFeedProps> = ({
               >
                 {/* Left: Photo + Name + Bedrooms */}
                 <div className="flex min-w-0 items-center gap-3.5">
-                  {item.competitorPhotoUrl ? (
+                  {showImg ? (
                     <img
                       src={sanitizeExternalUrl(item.competitorPhotoUrl)}
                       alt={item.competitorName}
+                      onError={() =>
+                        setFailedImages((prev) => ({ ...prev, [item.id]: true }))
+                      }
                       className="h-12 w-16 shrink-0 rounded-lg border border-slate-200 object-cover"
                     />
                   ) : (
@@ -160,9 +195,7 @@ export const PriceChangesFeed: React.FC<PriceChangesFeedProps> = ({
                     ) : (
                       <TrendingUp className="h-3.5 w-3.5" />
                     )}
-                    <span>
-                      {isDecrease ? `-${absPct}%` : `+${absPct}%`}
-                    </span>
+                    <span>{isDecrease ? `-${absPct}%` : `+${absPct}%`}</span>
                   </span>
                 </div>
               </div>

@@ -164,6 +164,7 @@ export const EmailAlertConfigSchema = z.object({
 export type EmailAlertConfig = z.infer<typeof EmailAlertConfigSchema>;
 
 export const MonitoringStateSchema = z.object({
+  isPrototype: z.boolean().optional(),
   property: HostPropertySchema.nullable(),
   competitors: z.array(CompetitorListingSchema),
   priceChanges: z.array(PriceChangeEventSchema),
