@@ -159,7 +159,7 @@ export const MobileDeviceStage: React.FC<MobileDeviceStageProps> = ({
       </aside>
 
       {/* Single Mobile App Viewport: Full-bleed on phones (<768px), iPhone 16 Pro frame on desktop (>=768px) */}
-      <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-white md:h-[832px] md:w-[396px] md:shrink-0 md:rounded-[52px] md:border-[11px] md:border-slate-900 md:shadow-2xl md:ring-1 md:ring-slate-900/10">
+      <div className="flex h-[100dvh] w-full max-w-[100vw] flex-col overflow-hidden bg-white md:h-[832px] md:w-[396px] md:max-w-none md:shrink-0 md:rounded-[52px] md:border-[11px] md:border-slate-900 md:shadow-2xl md:ring-1 md:ring-slate-900/10">
         {/* iOS Status Bar + Dynamic Island (desktop preview only) */}
         <div className="relative hidden h-11 shrink-0 items-center justify-between bg-white px-7 text-xs font-semibold text-slate-900 select-none md:flex">
           <span className="tabular">9:41</span>
@@ -262,7 +262,7 @@ export const MobileDeviceStage: React.FC<MobileDeviceStageProps> = ({
                     <button
                       type="button"
                       onClick={onSwitchToOwnProperty}
-                      className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      className="rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
                     >
                       Use my Airbnb
                     </button>
@@ -272,10 +272,10 @@ export const MobileDeviceStage: React.FC<MobileDeviceStageProps> = ({
                     onClick={onTriggerCheck}
                     disabled={isSimulatingCheck || (!isPrototype && compsCount === 0)}
                     aria-label={isPrototype ? 'Simulate daily check' : 'Check prices'}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-45"
+                    className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-slate-800 disabled:opacity-45"
                   >
                     <RefreshCw
-                      className={`h-3.5 w-3.5 ${isSimulatingCheck ? 'animate-spin' : ''}`}
+                      className={`h-3 w-3 ${isSimulatingCheck ? 'animate-spin' : ''}`}
                     />
                     <span>{isPrototype ? 'Check' : 'Check prices'}</span>
                   </button>
