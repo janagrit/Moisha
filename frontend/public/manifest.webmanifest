@@ -1,13 +1,15 @@
 {
-  "name": "Moisha",
+  "name": "Moisha — Airbnb Competitor Monitor",
   "short_name": "Moisha",
-  "description": "A pocket advisor for what to charge tonight, based on your neighborhood.",
+  "description": "Mobile competitor price monitor and daily alert assistant for US Airbnb hosts.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#FAF8F5",
-  "theme_color": "#FAF8F5",
+  "orientation": "portrait",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0F172A",
   "icons": [
+    { "src": "moisha-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "moisha-logo.png", "sizes": "256x256", "type": "image/png" }
   ]
 }

@@ -100,26 +100,26 @@ export const PropertyOnboarding: React.FC<PropertyOnboardingProps> = ({
   };
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-10 sm:py-16">
+    <div className="py-2">
       {onLoadPrototype && (
-        <div className="mb-4">
+        <div className="mb-3">
           <button
             type="button"
             onClick={onLoadPrototype}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Back to live prototype (Washington, DC 20002)</span>
+            <span>Back to DC 20002 demo</span>
           </button>
         </div>
       )}
 
-      <div className="surface p-6 sm:p-8">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-            Register your US Airbnb listing
+      <div className="surface p-5">
+        <div className="mb-5">
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900">
+            Register your US Airbnb
           </h1>
-          <p className="mt-1.5 text-sm text-slate-500">
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">
             Enter your listing once to benchmark comparable properties and track neighbor rate changes.
           </p>
         </div>

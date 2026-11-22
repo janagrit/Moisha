@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Sparkles, CheckCircle2, Mail } from 'lucide-react';
-import { TopBar } from './components/TopBar';
+import { ChevronRight, Mail, PlusCircle, Sparkles, TrendingDown, TrendingUp } from 'lucide-react';
+import { MobileDeviceStage, MobileTabId } from './components/MobileDeviceStage';
 import { PropertyOnboarding } from './components/PropertyOnboarding';
 import { MyPropertyCard } from './components/MyPropertyCard';
 import { MarketOverviewStrip } from './components/MarketOverviewStrip';
@@ -28,6 +28,8 @@ import {
   saveMonitoringState,
   createInitialMonitoringState,
   recordPriceCheck,
+  buildPriceChangeMailtoHref,
+  formatShortDate,
 } from './services/monitoringService';
 import {
   createPrototypeMonitoringState,
@@ -42,6 +44,7 @@ import {
 
 export default function App() {
   const [state, setState] = useState<MonitoringState>(() => loadMonitoringState());
+  const [activeTab, setActiveTab] = useState<MobileTabId>('home');
 
   const [editPropertyOpen, setEditPropertyOpen] = useState(false);
   const [compModalOpen, setCompModalOpen] = useState(false);
@@ -50,7 +53,7 @@ export default function App() {
   const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   const [isSimulatingCheck, setIsSimulatingCheck] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [pushBannerChange, setPushBannerChange] = useState<PriceChangeEvent | null>(null);
 
   const [aiAvailable, setAiAvailable] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -96,7 +99,8 @@ export default function App() {
 
   const handleRegisterProperty = (property: HostProperty) => {
     setAiSummary(null);
-    setToastMessage(null);
+    setPushBannerChange(null);
+    setActiveTab('home');
     setState({
       ...createInitialMonitoringState(),
       isPrototype: false,
@@ -106,13 +110,14 @@ export default function App() {
 
   const handleSwitchToOwnProperty = () => {
     setAiSummary(null);
-    setToastMessage(null);
+    setPushBannerChange(null);
     setState(createInitialMonitoringState());
   };
 
   const handleLoadPrototype = () => {
     setAiSummary(null);
-    setToastMessage(null);
+    setPushBannerChange(null);
+    setActiveTab('home');
     setState(createPrototypeMonitoringState());
   };
 
@@ -125,13 +130,9 @@ export default function App() {
       setState(nextState);
       setIsSimulatingCheck(false);
       if (detectedChanges.length > 0) {
-        setToastMessage(
-          `Daily check complete: ${detectedChanges.length} competitor price ${
-            detectedChanges.length === 1 ? 'change' : 'changes'
-          } detected & morning email alert updated.`,
-        );
+        setPushBannerChange(detectedChanges[0]);
       }
-    }, 450);
+    }, 400);
   };
 
   const handleSaveProperty = (updated: HostProperty) => {
@@ -145,7 +146,7 @@ export default function App() {
   const handleResetProperty = () => {
     setEditPropertyOpen(false);
     setAiSummary(null);
-    setToastMessage(null);
+    setPushBannerChange(null);
     setState(createInitialMonitoringState());
   };
 
@@ -190,12 +191,13 @@ export default function App() {
       };
 
       if (input.nightlyPrice !== existing.nightlyPrice) {
-        const { nextState } = recordPriceCheck(
+        const { nextState, detectedChanges } = recordPriceCheck(
           updatedMetaState,
           { [existing.id]: input.nightlyPrice },
           nowIso,
         );
         setState(nextState);
+        if (detectedChanges.length > 0) setPushBannerChange(detectedChanges[0]);
       } else {
         setState(updatedMetaState);
       }
@@ -256,7 +258,7 @@ export default function App() {
       competitors: [...prev.competitors, ...createdList],
       lastCheckedAt: nowIso,
     }));
-    setToastMessage(`Imported ${createdList.length} listings from Airbnb and sorted comparable matches.`);
+    setActiveTab('comps');
   };
 
   const handleDeleteCompetitor = (id: string) => {
@@ -273,6 +275,9 @@ export default function App() {
     setAiSummary(null);
     const { nextState, detectedChanges } = recordPriceCheck(state, observedPricesById);
     setState(nextState);
+    if (detectedChanges.length > 0) {
+      setPushBannerChange(detectedChanges[0]);
+    }
     return detectedChanges;
   };
 
@@ -292,114 +297,114 @@ export default function App() {
   };
 
   const isPrototype = Boolean(state.isPrototype);
+  const neighborhoodLabel = state.property
+    ? `${state.property.neighborhood} · ${state.property.bedrooms}BR`
+    : '';
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#F8FAFC] text-slate-900">
-      <TopBar
-        property={state.property}
+    <>
+      <MobileDeviceStage
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        hasProperty={Boolean(state.property && overview)}
         isPrototype={isPrototype}
         isSimulatingCheck={isSimulatingCheck}
-        lastCheckedAt={state.lastCheckedAt}
-        emailConfig={state.emailConfig}
-        competitorCount={state.competitors.length}
-        onRunPrototypeCheck={handleRunPrototypeCheck}
-        onOpenCheckModal={() => setCheckModalOpen(true)}
-        onOpenEmailModal={() => setEmailModalOpen(true)}
+        changesCount={state.priceChanges.length}
+        compsCount={partitioned.primary.length}
+        neighborhoodLabel={neighborhoodLabel}
+        pushBannerChange={pushBannerChange}
+        onDismissPushBanner={() => setPushBannerChange(null)}
+        onTapPushBanner={() => {
+          setPushBannerChange(null);
+          setEmailModalOpen(true);
+        }}
+        onTriggerCheck={() => {
+          if (isPrototype) {
+            handleRunPrototypeCheck();
+          } else {
+            setCheckModalOpen(true);
+          }
+        }}
         onSwitchToOwnProperty={handleSwitchToOwnProperty}
-      />
-
-      {!state.property || !overview ? (
-        <main className="flex-1">
+        onLoadPrototype={handleLoadPrototype}
+      >
+        {!state.property || !overview ? (
           <PropertyOnboarding
             onRegisterProperty={handleRegisterProperty}
             onLoadPrototype={handleLoadPrototype}
           />
-        </main>
-      ) : (
-        <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-4 py-7 sm:px-6 lg:px-8">
-          {/* Concise Prototype Banner */}
-          {isPrototype && (
-            <div className="flex flex-col justify-between gap-3 rounded-2xl border border-indigo-200/80 bg-indigo-50/70 px-5 py-3.5 text-xs text-indigo-950 sm:flex-row sm:items-center">
-              <div className="flex items-start gap-2.5 sm:items-center">
-                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600 sm:mt-0" />
-                <span>
-                  <strong>Interactive Prototype (DC 20002):</strong> Airbnb’s map mixes 111 units with no price history. Moisha isolates your <strong>5 true 3BR competitors</strong>, catches daily rate drops, and prepares your morning email alert.
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleSwitchToOwnProperty}
-                className="shrink-0 font-semibold text-indigo-700 underline hover:text-indigo-900"
-              >
-                Register my own listing →
-              </button>
-            </div>
-          )}
+        ) : activeTab === 'home' ? (
+          <div className="space-y-3">
+            <MyPropertyCard
+              property={state.property}
+              overview={overview}
+              aiSummary={aiSummary}
+              aiAvailable={aiAvailable}
+              aiLoading={aiLoading}
+              onRequestAiSummary={() => void handleRequestAiSummary()}
+              onQuickSetPrice={(price) =>
+                handleSaveProperty({ ...state.property!, nightlyPrice: price })
+              }
+              onEditProperty={() => setEditPropertyOpen(true)}
+            />
 
-          {/* Live Check Confirmation Banner */}
-          {toastMessage && (
-            <div
-              role="status"
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-5 py-3 text-xs text-emerald-950"
+            <PriceChangesFeed
+              changes={state.priceChanges}
+              limit={3}
+              hasCompetitors={state.competitors.length > 0}
+              isPrototype={isPrototype}
+              isSimulatingCheck={isSimulatingCheck}
+              lastCheckedAt={state.lastCheckedAt}
+              onRunPrototypeCheck={handleRunPrototypeCheck}
+              onOpenCheckModal={() => setCheckModalOpen(true)}
+              onOpenEmailModal={() => setEmailModalOpen(true)}
+              onOpenAddCompetitor={() => {
+                setEditingComp(null);
+                setCompModalOpen(true);
+              }}
+              onSeeAllChanges={
+                state.priceChanges.length > 3 ? () => setActiveTab('changes') : undefined
+              }
+            />
+
+            <MarketOverviewStrip
+              property={state.property}
+              overview={overview}
+              excludedCount={partitioned.excluded.length}
+            />
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('comps')}
+              className="surface flex w-full items-center justify-between px-4 py-3 text-left text-xs font-semibold text-slate-800 hover:bg-slate-50"
             >
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                <span className="font-medium">{toastMessage}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setEmailModalOpen(true)}
-                  className="inline-flex items-center gap-1 font-semibold text-emerald-800 underline hover:text-emerald-950"
-                >
-                  <Mail className="h-3.5 w-3.5" />
-                  <span>Open morning email preview</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setToastMessage(null)}
-                  className="text-emerald-700 hover:text-emerald-950"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          )}
-
-          <MyPropertyCard
-            property={state.property}
-            overview={overview}
-            aiSummary={aiSummary}
-            aiAvailable={aiAvailable}
-            aiLoading={aiLoading}
-            onRequestAiSummary={() => void handleRequestAiSummary()}
-            onQuickSetPrice={(price) =>
-              handleSaveProperty({ ...state.property!, nightlyPrice: price })
-            }
-            onEditProperty={() => setEditPropertyOpen(true)}
-          />
-
-          <MarketOverviewStrip
-            property={state.property}
-            overview={overview}
-            excludedCount={partitioned.excluded.length}
-          />
-
-          <PriceChangesFeed
-            changes={state.priceChanges}
-            hasCompetitors={state.competitors.length > 0}
-            isPrototype={isPrototype}
-            isSimulatingCheck={isSimulatingCheck}
-            lastCheckedAt={state.lastCheckedAt}
-            onRunPrototypeCheck={handleRunPrototypeCheck}
-            onOpenCheckModal={() => setCheckModalOpen(true)}
-            onOpenEmailModal={() => setEmailModalOpen(true)}
-            onOpenAddCompetitor={() => {
-              setEditingComp(null);
-              setCompModalOpen(true);
-            }}
-          />
-
+              <span>
+                Browse {partitioned.primary.length} comparable {state.property.bedrooms}BR listings
+                {partitioned.excluded.length > 0
+                  ? ` (${partitioned.excluded.length} non-${state.property.bedrooms}BR excluded)`
+                  : ''}
+              </span>
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </button>
+          </div>
+        ) : activeTab === 'changes' ? (
+          <div className="space-y-3.5">
+            <PriceChangesFeed
+              changes={state.priceChanges}
+              hasCompetitors={state.competitors.length > 0}
+              isPrototype={isPrototype}
+              isSimulatingCheck={isSimulatingCheck}
+              lastCheckedAt={state.lastCheckedAt}
+              onRunPrototypeCheck={handleRunPrototypeCheck}
+              onOpenCheckModal={() => setCheckModalOpen(true)}
+              onOpenEmailModal={() => setEmailModalOpen(true)}
+              onOpenAddCompetitor={() => {
+                setEditingComp(null);
+                setCompModalOpen(true);
+              }}
+            />
+          </div>
+        ) : activeTab === 'comps' ? (
           <CompetitorListingsSection
             property={state.property}
             isPrototype={isPrototype}
@@ -416,8 +421,108 @@ export default function App() {
             }}
             onDeleteCompetitor={handleDeleteCompetitor}
           />
-        </main>
-      )}
+        ) : (
+          /* Alerts & Account Tab */
+          <div className="space-y-3.5">
+            <section className="surface p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    8:00 AM Price-Change Digest
+                  </h2>
+                  <p className="text-[11px] text-slate-500">
+                    Sent whenever monitored {state.property.bedrooms}BR neighbors change rates
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEmailModalOpen(true)}
+                  className="btn-secondary h-8 px-2.5 text-xs"
+                >
+                  Edit email
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs">
+                <div className="font-semibold text-slate-900">
+                  To: {state.emailConfig.email || 'Not set'}
+                </div>
+                <div className="mt-2 divide-y divide-slate-200/70 rounded-lg border border-slate-200 bg-white px-2.5">
+                  {state.priceChanges.slice(0, 3).map((chg) => {
+                    const isDrop = chg.deltaAmount < 0;
+                    return (
+                      <div
+                        key={chg.id}
+                        className="flex items-center justify-between gap-2 py-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-slate-900">
+                            {chg.competitorName}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {formatShortDate(chg.changedAt)}
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold tabular ${
+                            isDrop
+                              ? 'bg-rose-50 text-rose-700'
+                              : 'bg-emerald-50 text-emerald-700'
+                          }`}
+                        >
+                          {isDrop ? (
+                            <TrendingDown className="h-2.5 w-2.5" />
+                          ) : (
+                            <TrendingUp className="h-2.5 w-2.5" />
+                          )}
+                          ${chg.previousPrice}→${chg.newPrice}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {state.emailConfig.email && state.priceChanges.length > 0 && (
+                  <a
+                    href={buildPriceChangeMailtoHref(
+                      state.emailConfig.email,
+                      state.property.name,
+                      state.priceChanges.slice(0, 10),
+                    )}
+                    className="btn-primary mt-3 h-9 w-full text-xs"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    <span>Open digest in Mail app</span>
+                  </a>
+                )}
+              </div>
+            </section>
+
+            <section className="surface space-y-2.5 p-4">
+              <h3 className="text-xs font-semibold text-slate-700">Switch property</h3>
+              {isPrototype ? (
+                <button
+                  type="button"
+                  onClick={handleSwitchToOwnProperty}
+                  className="btn-secondary h-9 w-full text-xs"
+                >
+                  <PlusCircle className="h-3.5 w-3.5" />
+                  <span>Register my own US Airbnb</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleLoadPrototype}
+                  className="btn-secondary h-9 w-full text-xs"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Load DC 20002 Demo Listing</span>
+                </button>
+              )}
+            </section>
+          </div>
+        )}
+      </MobileDeviceStage>
 
       {editPropertyOpen && state.property && (
         <PropertyEditModal
@@ -463,6 +568,6 @@ export default function App() {
           }
         />
       )}
-    </div>
+    </>
   );
 }

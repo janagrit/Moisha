@@ -23,7 +23,7 @@ export const MarketOverviewStrip: React.FC<MarketOverviewStripProps> = ({
 
   const vsAvgSubtext =
     overview.competitorAveragePrice === null
-      ? 'No comparables yet'
+      ? 'No comps yet'
       : overview.myPriceVsAveragePercent === null
         ? `$${overview.competitorAveragePrice}/nt avg`
         : `${overview.myPriceVsAveragePercent > 0 ? '+' : ''}${overview.myPriceVsAveragePercent}% vs $${overview.competitorAveragePrice} avg`;
@@ -60,108 +60,89 @@ export const MarketOverviewStrip: React.FC<MarketOverviewStripProps> = ({
   }
 
   return (
-    <section aria-label="Market overview" className="space-y-3.5">
-      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
-        <div className="surface p-4 sm:p-5">
-          <span className="block text-xs font-medium text-slate-500">
-            Comparable monitored
+    <section aria-label="Market overview" className="space-y-2.5">
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="surface min-w-0 p-3.5">
+          <span className="block text-[11px] font-medium text-slate-500">
+            Comparable {property.bedrooms}BRs
           </span>
-          <div className="mt-1.5 tabular text-2xl font-semibold text-slate-900">
-            {overview.comparableCount}
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="tabular text-xl font-bold text-slate-900">
+              {overview.comparableCount}
+            </span>
+            {overview.changesSinceLastCheck > 0 && (
+              <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 tabular">
+                {overview.changesSinceLastCheck} moved
+              </span>
+            )}
           </div>
-          <span className="mt-1 block truncate text-xs text-slate-500">
-            {property.propertyType === 'studio'
-              ? 'Studios only'
-              : `${property.bedrooms}-bed entire ${property.bedrooms === 1 ? 'home' : 'homes'}`}
-            {excludedCount > 0 ? ` · ${excludedCount} filtered out` : ''}
+          <span className="mt-0.5 block truncate text-[11px] text-slate-500">
+            {excludedCount > 0
+              ? `${excludedCount} non-${property.bedrooms}BR filtered`
+              : `${property.bedrooms}-bed entire homes`}
           </span>
         </div>
 
-        <div className="surface p-4 sm:p-5">
-          <span className="block text-xs font-medium text-slate-500">
-            My price vs. average
+        <div className="surface min-w-0 p-3.5">
+          <span className="block text-[11px] font-medium text-slate-500">
+            My rate vs. avg
           </span>
-          <div className={`mt-1.5 tabular text-2xl font-semibold ${vsAvgColor}`}>
-            {vsAvgText}
-          </div>
-          <span className="mt-1 block truncate text-xs text-slate-500">{vsAvgSubtext}</span>
+          <div className={`mt-1 tabular text-xl font-bold ${vsAvgColor}`}>{vsAvgText}</div>
+          <span className="mt-0.5 block truncate text-[11px] text-slate-500">{vsAvgSubtext}</span>
         </div>
 
-        <div className="surface p-4 sm:p-5">
-          <span className="block text-xs font-medium text-slate-500">
-            Cheapest comparable
-          </span>
-          <div className="mt-1.5 tabular text-2xl font-semibold text-slate-900">
+        <div className="surface min-w-0 p-3.5">
+          <span className="block text-[11px] font-medium text-slate-500">Cheapest comp</span>
+          <div className="mt-1 tabular text-xl font-bold text-slate-900">
             {overview.cheapestComparable ? `$${overview.cheapestComparable.nightlyPrice}` : '—'}
           </div>
-          <span className="mt-1 block truncate text-xs text-slate-500">
+          <span className="mt-0.5 block truncate text-[11px] text-slate-500">
             {overview.cheapestComparable ? overview.cheapestComparable.name : 'Unavailable'}
           </span>
         </div>
 
-        <div className="surface p-4 sm:p-5">
-          <span className="block text-xs font-medium text-slate-500">
-            Most expensive
-          </span>
-          <div className="mt-1.5 tabular text-2xl font-semibold text-slate-900">
+        <div className="surface min-w-0 p-3.5">
+          <span className="block text-[11px] font-medium text-slate-500">Highest comp</span>
+          <div className="mt-1 tabular text-xl font-bold text-slate-900">
             {overview.mostExpensiveComparable
               ? `$${overview.mostExpensiveComparable.nightlyPrice}`
               : '—'}
           </div>
-          <span className="mt-1 block truncate text-xs text-slate-500">
+          <span className="mt-0.5 block truncate text-[11px] text-slate-500">
             {overview.mostExpensiveComparable
               ? overview.mostExpensiveComparable.name
               : 'Unavailable'}
           </span>
         </div>
-
-        <div className="surface col-span-2 p-4 sm:col-span-1 sm:p-5">
-          <span className="block text-xs font-medium text-slate-500">
-            Price changes
-          </span>
-          <div className="mt-1.5 tabular text-2xl font-semibold text-slate-900">
-            {overview.changesSinceLastCheck}
-          </div>
-          <span className="mt-1 block truncate text-xs text-slate-500">
-            Since previous check
-          </span>
-        </div>
       </div>
 
       {showPositionBar && (
-        <div className="surface px-5 py-4">
-          <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="font-medium text-slate-600">
-              Where your nightly rate sits vs. comparable {property.bedrooms}-bedroom entire homes
+        <div className="surface px-4 py-3">
+          <div className="mb-2 flex items-center justify-between text-[11px] tabular">
+            <span className="inline-flex items-center gap-1.5 text-slate-500">
+              <span className="h-2 w-2 rounded-full bg-slate-400" />
+              Avg: <strong className="text-slate-900">${avgPrice}</strong>
             </span>
-            <div className="flex items-center gap-4 tabular text-slate-600">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-slate-400" />
-                3BR Avg: <strong className="text-slate-900">${avgPrice}</strong>
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-slate-900 ring-2 ring-slate-900/20" />
-                My price: <strong className="text-slate-900">${myPrice}</strong>
-              </span>
-            </div>
+            <span className="inline-flex items-center gap-1.5 text-slate-600">
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-900" />
+              You: <strong className="text-slate-900">${myPrice}</strong>
+            </span>
           </div>
 
-          <div className="relative h-2.5 w-full rounded-full bg-slate-100">
+          <div className="relative h-2 w-full rounded-full bg-slate-100">
             <div
               style={{ left: `${avgPosPct}%` }}
-              title={`Neighborhood average: $${avgPrice}/night`}
-              className="absolute top-1/2 h-4 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-slate-400"
+              className="absolute top-1/2 h-3.5 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-slate-400"
             />
             <div
               style={{ left: `${myPosPct}%` }}
-              title={`Your price: $${myPrice}/night`}
-              className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-slate-900 shadow-sm"
+              className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-slate-900 shadow-xs"
             />
           </div>
 
-          <div className="mt-2 flex items-center justify-between text-[11px] font-medium text-slate-400 tabular">
-            <span>Cheapest 3BR: ${minPrice}/nt</span>
-            <span>Highest 3BR: ${maxPrice}/nt</span>
+          <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium text-slate-400 tabular">
+            <span>Low ${minPrice}</span>
+            <span>High ${maxPrice}</span>
           </div>
         </div>
       )}

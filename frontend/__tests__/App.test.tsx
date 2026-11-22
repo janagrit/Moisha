@@ -3,7 +3,7 @@ import { render, screen, fireEvent, cleanup, within } from '@testing-library/rea
 import App from '../App';
 import { US_ONLY_ERROR_MESSAGE } from '../services/usLocationService';
 
-describe('Moisha competitor-monitoring prototype & dashboard', () => {
+describe('Moisha mobile competitor-monitoring app', () => {
   beforeEach(() => {
     window.localStorage.clear();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -46,7 +46,7 @@ describe('Moisha competitor-monitoring prototype & dashboard', () => {
     vi.restoreAllMocks();
   });
 
-  it('opens immediately on the interactive DC 20002 prototype and previews morning email alerts', () => {
+  it('opens immediately on the mobile DC 20002 prototype, navigates Comps tab, and previews morning alerts', () => {
     render(<App />);
 
     expect(screen.getByText('H St Corridor Brick Rowhouse')).toBeTruthy();
@@ -54,14 +54,18 @@ describe('Moisha competitor-monitoring prototype & dashboard', () => {
       1,
     );
     expect(screen.getByText('-16.8%')).toBeTruthy();
-    expect(screen.getByText(/Excluded non-comparable listings \(2\)/i)).toBeTruthy();
 
-    // Open morning email alert preview
+    // Preview morning email alert modal
     fireEvent.click(screen.getByRole('button', { name: /Preview email alert/i }));
     const emailDialog = screen.getByRole('dialog');
     expect(
       within(emailDialog).getByText(/Morning price-change email alert/i),
     ).toBeTruthy();
+    fireEvent.click(within(emailDialog).getByRole('button', { name: /Close modal/i }));
+
+    // Switch to Comps tab in mobile bottom navigation and verify excluded non-comparables
+    fireEvent.click(screen.getByRole('button', { name: /Comps/i }));
+    expect(screen.getByText(/Excluded non-comparable listings \(2\)/i)).toBeTruthy();
   });
 
   it('switches to custom listing setup and rejects non-US properties with the exact required message', async () => {
@@ -81,7 +85,7 @@ describe('Moisha competitor-monitoring prototype & dashboard', () => {
     expect(alert.textContent).toContain(US_ONLY_ERROR_MESSAGE);
   });
 
-  it('registers a US property, imports pasted Airbnb search text, sorts comparables, and tracks price changes', async () => {
+  it('registers a US property, imports pasted Airbnb search text, sorts mobile comp cards, and tracks price changes', async () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole('button', { name: /Use my Airbnb/i }));
@@ -111,14 +115,16 @@ describe('Moisha competitor-monitoring prototype & dashboard', () => {
     });
     fireEvent.click(within(compDialog).getByRole('button', { name: /Import 3 listings/i }));
 
+    // Bulk import navigates straight to Comps tab
     expect(screen.getByText(/Excluded non-comparable listings \(1\)/i)).toBeTruthy();
 
     // Sort high to low and verify Bouldin Creek ($310) appears before Travis Heights ($250)
-    const sortSelect = screen.getByLabelText(/Sort competitor listings/i);
+    const compsSection = screen.getByRole('region', { name: /Competitor listings/i });
+    const sortSelect = within(compsSection).getByLabelText(/Sort competitor listings/i);
     fireEvent.change(sortSelect, { target: { value: 'price_desc' } });
-    const rows = screen.getAllByRole('row');
-    expect(rows[1].textContent).toContain('Bouldin Creek 3BR Villa');
-    expect(rows[2].textContent).toContain('Travis Heights 3BR House');
+    const items = within(compsSection).getAllByRole('listitem');
+    expect(items[0].textContent).toContain('Bouldin Creek 3BR Villa');
+    expect(items[1].textContent).toContain('Travis Heights 3BR House');
 
     // Run a price check where Travis Heights 3BR drops from $250 -> $215 (-14.0%)
     fireEvent.click(screen.getByRole('button', { name: /^Check prices$/i }));
@@ -129,6 +135,8 @@ describe('Moisha competitor-monitoring prototype & dashboard', () => {
     fireEvent.change(checkInput, { target: { value: '215' } });
     fireEvent.click(within(checkDialog).getByRole('button', { name: /Save check/i }));
 
+    // Switch to Changes tab to verify -14.0% logged
+    fireEvent.click(screen.getByRole('button', { name: /Changes/i }));
     expect(screen.getByText('-14.0%')).toBeTruthy();
   });
 });
