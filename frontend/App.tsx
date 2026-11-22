@@ -1,461 +1,546 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { BarChart3, Layers, Calculator, Sliders } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { PropertySelector } from './components/PropertySelector';
 import { AgentAlertBanner } from './components/AgentAlertBanner';
-import { PromotionPlanner } from './components/PromotionPlanner';
-import { PocketAdvisorChat } from './components/PocketAdvisorChat';
-import { LiveMarketGroundingCard } from './components/LiveMarketGroundingCard';
-import { CompsManager } from './components/CompsManager';
-import { RuleEngineCard } from './components/RuleEngineCard';
 import { MarketCharts } from './components/MarketCharts';
+import { PocketAdvisorChat } from './components/PocketAdvisorChat';
+import { CompsManager } from './components/CompsManager';
+import { LiveMarketGroundingCard } from './components/LiveMarketGroundingCard';
+import { RevenueCalculator } from './components/RevenueCalculator';
+import { PromotionPlanner } from './components/PromotionPlanner';
+import { RuleEngineCard } from './components/RuleEngineCard';
 import { NotificationCenter } from './components/NotificationCenter';
-import { AutomationExporter } from './components/AutomationExporter';
+import { SettingsModal } from './components/SettingsModal';
 
-import {
-  INITIAL_HOUSES,
-  INITIAL_RULES,
-} from './constants';
 import {
   PropertyHouse,
   ListingComp,
   PricingRule,
   AgentDecision,
   NotificationLog,
+  NotificationChannel,
   AirbnbPromotion,
+  AiSettings,
+  ActiveWorkspaceTab,
 } from './types';
-import { runMoishaAiAnalysis } from './services/geminiService';
+import { evaluatePropertyPricing } from './services/pricingEngine';
+import { checkGeminiProxyStatus, runMoishaAnalysis } from './services/aiService';
+import {
+  loadPersistedState,
+  savePersistedState,
+  clearPersistedState,
+} from './services/storageService';
+import { sendBrowserAlertNotification } from './services/notificationService';
 import { playAlertSound } from './services/audioService';
 
 export default function App() {
-  const [houses, setHouses] = useState<PropertyHouse[]>(INITIAL_HOUSES);
-  const [selectedHouseId, setSelectedHouseId] = useState<string>(INITIAL_HOUSES[0].id);
-  const [rules, setRules] = useState<PricingRule[]>(INITIAL_RULES);
+  const initialState = useMemo(() => loadPersistedState(), []);
 
-  const selectedHouse = houses.find((h) => h.id === selectedHouseId) || houses[0];
+  const [houses, setHouses] = useState<PropertyHouse[]>(initialState.houses);
+  const [selectedHouseId, setSelectedHouseId] = useState<string>(initialState.selectedHouseId);
+  const [rules, setRules] = useState<PricingRule[]>(initialState.rules);
+  const [logs, setLogs] = useState<NotificationLog[]>(initialState.logs);
+  const [aiSettings, setAiSettings] = useState<AiSettings>(initialState.aiSettings);
 
-  const [isScanning, setIsScanning] = useState<boolean>(false);
-  const [lastScannedTime, setLastScannedTime] = useState<string | null>("Today 08:00 AM");
-  const [agentStatus, setAgentStatus] = useState<'standby' | 'scanning' | 'alert' | 'ok'>('alert');
+  const [activeTab, setActiveTab] = useState<ActiveWorkspaceTab>('overview');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [lastScannedTime, setLastScannedTime] = useState<string | null>('08:00 AM');
+  const [proxyAvailable, setProxyAvailable] = useState(false);
+  const [proxyModel, setProxyModel] = useState('gemini-2.5-flash');
 
-  const [decision, setDecision] = useState<AgentDecision>({
-    status: 'ALERT',
-    recommendedPrice: 215,
-    priceDelta: -70,
-    confidenceScore: 95,
-    primaryTriggerRule: 'Neighbor Undercutting & 5-Day Empty Gap',
-    reasoning: `Oy vey, Carlos! Five days empty at 1114 Florida Ave NE (Apr 16 - Apr 21) is $1,425 flying out the window! Your direct neighbor 3 doors down at 1108 Florida Ave dropped to $215/night ($70 cheaper than your $285). Drop your base rate to $215 or activate the 15% Last-Minute Promo badge, and we will win the booking before sundown!`,
-    neighborGapAnalysis: `Direct neighbor at 1108 Florida Ave NE dropped from $270 to $215/night with 4.93 stars. At $285/night, your 3BR brownstone is being bypassed by guests searching DC 20002.`,
-    recommendedPromotions: [
-      {
-        id: 'promo-1',
-        name: 'Last-Minute 15% Off Badge',
-        badge: '15% Off Last-Minute',
-        discountPercent: 15,
-        effectivePrice: 242,
-        startDate: selectedHouse.unbookedStartDate,
-        endDate: selectedHouse.unbookedEndDate,
-        reason: 'Displays official Airbnb strikethrough badge in DC search results for travelers looking this week.',
-        status: 'recommended'
-      },
-      {
-        id: 'promo-2',
-        name: 'Fill 5-Day Orphan Gap (Stay 4+ Nights)',
-        badge: 'Length of Stay 18% Off',
-        discountPercent: 18,
-        effectivePrice: 233,
-        startDate: selectedHouse.unbookedStartDate,
-        endDate: selectedHouse.unbookedEndDate,
-        reason: 'Incentivizes travelers to book the entire 5-day unbooked block in a single reservation.',
-        status: 'recommended'
+  // Optional Gemini narrative override keyed to exact house+rules snapshot
+  const [aiDecisionOverride, setAiDecisionOverride] = useState<{
+    houseId: string;
+    decision: AgentDecision;
+  } | null>(null);
+
+  const selectedHouse = useMemo(
+    () => houses.find((h) => h.id === selectedHouseId) || houses[0],
+    [houses, selectedHouseId],
+  );
+
+  // Reactive deterministic pricing engine: always up to date with any house, comp, or rule change
+  const baseDecision = useMemo(
+    () => evaluatePropertyPricing(selectedHouse, rules, lastScannedTime || undefined),
+    [selectedHouse, rules, lastScannedTime],
+  );
+
+  const decision: AgentDecision =
+    aiDecisionOverride && aiDecisionOverride.houseId === selectedHouse.id
+      ? {
+          ...baseDecision,
+          headline: aiDecisionOverride.decision.headline,
+          reasoning: aiDecisionOverride.decision.reasoning,
+          neighborGapAnalysis: aiDecisionOverride.decision.neighborGapAnalysis,
+          recommendedActions: aiDecisionOverride.decision.recommendedActions,
+          source: 'gemini',
+        }
+      : baseDecision;
+
+  // Persist portfolio, rules, logs, and settings automatically
+  useEffect(() => {
+    savePersistedState({
+      houses,
+      selectedHouseId,
+      rules,
+      logs,
+      aiSettings,
+    });
+  }, [houses, selectedHouseId, rules, logs, aiSettings]);
+
+  // Check whether local Vite dev proxy has GEMINI_API_KEY configured
+  useEffect(() => {
+    let active = true;
+    checkGeminiProxyStatus().then((status) => {
+      if (active) {
+        setProxyAvailable(status.proxyAvailable);
+        setProxyModel(status.model);
       }
-    ],
-    competitorSummary: {
-      totalComps: 4,
-      vacantComps: 3,
-      avgVacantPrice: 216,
-      cheapestNeighborPrice: 210,
-      undercuttingCompsCount: 3,
-    },
-    recommendedActions: [
-      'Drop price to $215/night or launch 15% Last-Minute Airbnb Promo.',
-      'Allow 2-night minimum stays for this 5-day gap to capture weekend spillover.',
-      'Notify property manager Carlos R. to prepare cleaning turnover schedule.'
-    ],
-    projectedBookingProbability: {
-      atCurrentPrice: 18,
-      atRecommendedPrice: 89,
-    },
-    timestamp: '08:00 AM',
-  });
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const [logs, setLogs] = useState<NotificationLog[]>([
-    {
-      id: 'log-1',
-      timestamp: 'Today 08:00 AM',
-      channel: 'telegram',
-      recipient: 'Carlos R. (Lead PM)',
-      propertyNickname: '1114 Florida Ave NE, DC 20002',
-      message: '🏠 MOISHA REMINDER: 1114 Florida Ave NE has 5 empty days! Neighbor at 1108 Florida Ave dropped to $215/nt. Recommend 15% promo or drop to $215.',
-      delivered: true,
-      status: 'sent',
-    },
-  ]);
-
-  // Run AI scan on selected house
-  const handleTriggerScan = useCallback(async () => {
-    setIsScanning(true);
-    setAgentStatus('scanning');
-
-    try {
-      const result = await runMoishaAiAnalysis(selectedHouse, rules);
-      setDecision(result);
-      setLastScannedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-
-      if (result.status === 'ALERT') {
-        setAgentStatus('alert');
-        playAlertSound();
-
-        const newLog: NotificationLog = {
-          id: `log-${Date.now()}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          channel: 'telegram',
-          recipient: `${selectedHouse.propertyManagerName}`,
-          propertyNickname: selectedHouse.nickname,
-          message: `🚨 MOISHA REMINDER [${selectedHouse.nickname}]: ${result.reasoning.slice(0, 110)}... Drop to $${result.recommendedPrice}/nt or run promotion.`,
-          delivered: true,
-          status: 'sent',
-        };
-        setLogs((prev) => [newLog, ...prev]);
-      } else {
-        setAgentStatus('ok');
-      }
-    } catch (e) {
-      console.error(e);
-      setAgentStatus('standby');
-    } finally {
-      setIsScanning(false);
+  const triggerChime = useCallback(() => {
+    if (aiSettings.soundEnabled) {
+      playAlertSound();
     }
-  }, [selectedHouse, rules]);
+  }, [aiSettings.soundEnabled]);
 
-  // When changing house, update advisory
+  const appendLog = useCallback(
+    (channel: NotificationChannel, message: string, delivered = true) => {
+      const entry: NotificationLog = {
+        id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        channel,
+        recipient:
+          channel === 'browser'
+            ? 'This Device (PWA)'
+            : `${selectedHouse.propertyManagerName}`,
+        propertyNickname: selectedHouse.nickname,
+        message,
+        delivered,
+        status: delivered ? 'sent' : 'failed',
+      };
+      setLogs((prev) => [entry, ...prev.slice(0, 49)]);
+    },
+    [selectedHouse.nickname, selectedHouse.propertyManagerName],
+  );
+
+  const runAnalysisForHouse = useCallback(
+    async (targetHouse: PropertyHouse, currentRules: PricingRule[]) => {
+      setIsScanning(true);
+      try {
+        const analyzed = await runMoishaAnalysis(
+          targetHouse,
+          currentRules,
+          aiSettings,
+          proxyAvailable,
+        );
+        const nowStr = new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        setLastScannedTime(nowStr);
+
+        if (analyzed.source === 'gemini') {
+          setAiDecisionOverride({ houseId: targetHouse.id, decision: analyzed });
+        } else {
+          setAiDecisionOverride(null);
+        }
+
+        if (analyzed.status === 'ALERT' || analyzed.status === 'UPSIDE') {
+          triggerChime();
+        }
+      } finally {
+        setIsScanning(false);
+      }
+    },
+    [aiSettings, proxyAvailable, triggerChime],
+  );
+
   const handleSelectHouse = (id: string) => {
     setSelectedHouseId(id);
-    const target = houses.find((h) => h.id === id);
-    if (!target) return;
-
-    const vacant = target.comps.filter((c) => !c.isBooked);
-    const minComp = vacant.reduce(
-      (m, c) => (c.currentPrice < m.currentPrice ? c : m),
-      vacant[0] || target.comps[0]
-    );
-
-    const targetPrice = Math.max(target.floorPrice, minComp ? minComp.currentPrice : target.currentPrice);
-
-    setDecision((prev) => ({
-      ...prev,
-      recommendedPrice: targetPrice,
-      priceDelta: targetPrice - target.currentPrice,
-      reasoning: `Listen to Uncle Moisha: ${target.nickname} (${target.address}) has ${target.unbookedDaysCount} unbooked days. Cheapest neighbor is asking $${minComp?.currentPrice}/night ($${target.currentPrice - (minComp?.currentPrice || 0)} cheaper than you). Let us not sleep on this!`,
-      neighborGapAnalysis: `Neighbor at ${minComp?.address} is listed at $${minComp?.currentPrice}/night.`,
-      competitorSummary: {
-        totalComps: target.comps.length,
-        vacantComps: vacant.length,
-        avgVacantPrice: Math.round(vacant.reduce((a, b) => a + b.currentPrice, 0) / (vacant.length || 1)),
-        cheapestNeighborPrice: minComp?.currentPrice || target.currentPrice,
-        undercuttingCompsCount: vacant.filter((c) => c.currentPrice < target.currentPrice).length,
-      },
-      recommendedPromotions: [
-        {
-          id: `promo-${target.id}-1`,
-          name: '15% Last-Minute Conversion Deal',
-          badge: '15% Off Badge',
-          discountPercent: 15,
-          effectivePrice: Math.max(target.floorPrice, Math.round(target.currentPrice * 0.85)),
-          startDate: target.unbookedStartDate,
-          endDate: target.unbookedEndDate,
-          reason: `Fills the ${target.unbookedDaysCount}-day gap for ${target.nickname}.`,
-          status: 'recommended'
-        }
-      ]
-    }));
   };
 
-  const handleEditAddress = (houseId: string, newAddress: string) => {
+  const handleUpdateHouse = (houseId: string, updates: Partial<PropertyHouse>) => {
+    setAiDecisionOverride(null);
     setHouses((prev) =>
-      prev.map((h) => (h.id === houseId ? { ...h, address: newAddress } : h))
+      prev.map((h) => (h.id === houseId ? { ...h, ...updates } : h)),
     );
   };
 
-  const handleUpdateComp = (id: string, updates: Partial<ListingComp>) => {
+  const handleAddHouse = (created: PropertyHouse) => {
+    setHouses((prev) => [...prev, created]);
+    setSelectedHouseId(created.id);
+    setAiDecisionOverride(null);
+  };
+
+  const handleDeleteHouse = (houseId: string) => {
+    setHouses((prev) => {
+      const remaining = prev.filter((h) => h.id !== houseId);
+      if (remaining.length > 0 && selectedHouseId === houseId) {
+        setSelectedHouseId(remaining[0].id);
+      }
+      return remaining.length > 0 ? remaining : prev;
+    });
+    setAiDecisionOverride(null);
+  };
+
+  const handleUpdateComp = (compId: string, updates: Partial<ListingComp>) => {
+    setAiDecisionOverride(null);
     setHouses((prev) =>
       prev.map((h) =>
-        h.id === selectedHouseId
+        h.id === selectedHouse.id
           ? {
               ...h,
-              comps: h.comps.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+              comps: h.comps.map((c) => (c.id === compId ? { ...c, ...updates } : c)),
             }
-          : h
-      )
+          : h,
+      ),
     );
   };
 
   const handleAddComp = (newComp: Omit<ListingComp, 'id'>) => {
+    setAiDecisionOverride(null);
     const created: ListingComp = {
       ...newComp,
       id: `comp-${Date.now()}`,
     };
     setHouses((prev) =>
       prev.map((h) =>
-        h.id === selectedHouseId ? { ...h, comps: [...h.comps, created] } : h
-      )
+        h.id === selectedHouse.id ? { ...h, comps: [...h.comps, created] } : h,
+      ),
     );
   };
 
-  const handleDeleteComp = (id: string) => {
+  const handleDeleteComp = (compId: string) => {
+    setAiDecisionOverride(null);
     setHouses((prev) =>
       prev.map((h) =>
-        h.id === selectedHouseId
-          ? { ...h, comps: h.comps.filter((c) => c.id !== id) }
-          : h
-      )
+        h.id === selectedHouse.id
+          ? { ...h, comps: h.comps.filter((c) => c.id !== compId) }
+          : h,
+      ),
     );
   };
 
+  // Fixed: computes updated house synchronously and passes directly into analysis (zero stale closure)
   const handleSimulateNeighborDrop = () => {
-    setHouses((prev) =>
-      prev.map((h) => {
-        if (h.id === selectedHouseId) {
-          const updatedComps = h.comps.map((c, idx) => {
-            if (idx === 0) {
-              return {
-                ...c,
-                originalPrice: c.currentPrice,
-                currentPrice: Math.max(160, c.currentPrice - 25),
-              };
-            }
-            return c;
-          });
-          return { ...h, comps: updatedComps };
-        }
-        return h;
-      })
+    const targetCompIndex = selectedHouse.comps.findIndex((c) => !c.isBooked);
+    const idxToDrop = targetCompIndex >= 0 ? targetCompIndex : 0;
+    if (selectedHouse.comps.length === 0) return;
+
+    const updatedComps = selectedHouse.comps.map((c, idx) =>
+      idx === idxToDrop
+        ? {
+            ...c,
+            originalPrice: c.currentPrice,
+            currentPrice: Math.max(120, c.currentPrice - 25),
+            isBooked: false,
+          }
+        : c,
     );
-    setTimeout(() => {
-      handleTriggerScan();
-    }, 200);
+    const updatedHouse: PropertyHouse = { ...selectedHouse, comps: updatedComps };
+
+    setAiDecisionOverride(null);
+    setHouses((prev) =>
+      prev.map((h) => (h.id === selectedHouse.id ? updatedHouse : h)),
+    );
+    void runAnalysisForHouse(updatedHouse, rules);
   };
 
   const handleApplyPriceChange = (newPrice: number) => {
+    const clamped = Math.max(decision.effectiveFloorPrice, Math.round(newPrice));
+    setAiDecisionOverride(null);
     setHouses((prev) =>
-      prev.map((h) => (h.id === selectedHouseId ? { ...h, currentPrice: newPrice } : h))
+      prev.map((h) => (h.id === selectedHouse.id ? { ...h, currentPrice: clamped } : h)),
     );
-    setDecision((prev) => ({
-      ...prev,
-      status: 'OK',
-      priceDelta: 0,
-      reasoning: `Mazel tov! Rate for ${selectedHouse.nickname} adjusted to $${newPrice}/night. You are now the sharpest deal on Florida Ave!`,
-    }));
-    setAgentStatus('ok');
+    triggerChime();
+    appendLog(
+      'telegram',
+      `Rate updated for ${selectedHouse.nickname}: now $${clamped}/night (floor $${decision.effectiveFloorPrice}/nt).`,
+    );
   };
 
-  const handleApplyPromotion = (promo: AirbnbPromotion) => {
+  const handleApplyPromotion = (promo: AirbnbPromotion | null) => {
+    setAiDecisionOverride(null);
     setHouses((prev) =>
-      prev.map((h) =>
-        h.id === selectedHouseId ? { ...h, activePromotion: promo } : h
-      )
+      prev.map((h) => (h.id === selectedHouse.id ? { ...h, activePromotion: promo } : h)),
     );
-    playAlertSound();
-    const newLog: NotificationLog = {
-      id: `log-${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      channel: 'telegram',
-      recipient: selectedHouse.propertyManagerName,
-      propertyNickname: selectedHouse.nickname,
-      message: `🎉 PROMO ACTIVATED [${selectedHouse.nickname}]: "${promo.badge}" now live on Airbnb at $${promo.effectivePrice}/night to fill the ${selectedHouse.unbookedDaysCount}-day empty gap.`,
-      delivered: true,
-      status: 'sent',
-    };
-    setLogs((prev) => [newLog, ...prev]);
+    triggerChime();
+    if (promo) {
+      appendLog(
+        'telegram',
+        `Promo activated on ${selectedHouse.nickname}: "${promo.badge}" at $${promo.effectivePrice}/night.`,
+      );
+    }
   };
 
   const handleSendReminderToPM = (promo?: AirbnbPromotion) => {
-    playAlertSound();
-    const promoText = promo
-      ? `Activate ${promo.badge} at $${promo.effectivePrice}/nt`
-      : `Drop price to $${decision.recommendedPrice}/nt`;
-
-    const newLog: NotificationLog = {
-      id: `log-${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      channel: 'telegram',
-      recipient: `${selectedHouse.propertyManagerName} (${selectedHouse.managerPhone})`,
-      propertyNickname: selectedHouse.nickname,
-      message: `🔔 MOISHA PM REMINDER: Action required for ${selectedHouse.nickname} (${selectedHouse.address}). 5 empty days upcoming. Neighbor is cheaper. Recommendation: ${promoText}.`,
-      delivered: true,
-      status: 'sent',
-    };
-    setLogs((prev) => [newLog, ...prev]);
+    triggerChime();
+    const actionSummary = promo
+      ? `Activate "${promo.badge}" ($${promo.effectivePrice}/nt)`
+      : `Adjust rate to $${decision.recommendedPrice}/nt`;
+    appendLog(
+      'whatsapp',
+      `PM Reminder [${selectedHouse.nickname}]: ${selectedHouse.unbookedDaysCount} nights open. Recommended: ${actionSummary}.`,
+    );
   };
 
-  const handleSendCustomNotification = (
-    channel: 'telegram' | 'twilio_sms' | 'slack',
-    text: string
+  const handleSendCustomNotification = async (
+    channel: NotificationChannel,
+    text: string,
   ) => {
-    playAlertSound();
-    const newLog: NotificationLog = {
-      id: `log-${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      channel: channel === 'twilio_sms' ? 'twilio_sms' : 'telegram',
-      recipient: selectedHouse.propertyManagerName,
-      propertyNickname: selectedHouse.nickname,
-      message: text,
-      delivered: true,
-      status: 'sent',
-    };
-    setLogs((prev) => [newLog, ...prev]);
+    triggerChime();
+    if (channel === 'browser') {
+      const ok = await sendBrowserAlertNotification(
+        `Moisha · ${selectedHouse.nickname}`,
+        text,
+      );
+      appendLog('browser', text, ok);
+      return;
+    }
+    appendLog(channel, text, true);
   };
+
+  const handleResetDemoData = () => {
+    const fresh = clearPersistedState();
+    setHouses(fresh.houses);
+    setSelectedHouseId(fresh.selectedHouseId);
+    setRules(fresh.rules);
+    setLogs(fresh.logs);
+    setAiSettings(fresh.aiSettings);
+    setAiDecisionOverride(null);
+  };
+
+  const aiActive =
+    aiSettings.mode === 'auto' &&
+    (proxyAvailable || Boolean(aiSettings.customApiKey.trim()));
+
+  const tabs: Array<{
+    id: ActiveWorkspaceTab;
+    label: string;
+    badge?: string;
+    icon: React.ReactNode;
+  }> = [
+    {
+      id: 'overview',
+      label: 'Verdict & Copilot',
+      badge:
+        decision.status === 'ALERT'
+          ? 'Alert'
+          : decision.status === 'UPSIDE'
+            ? 'Upside'
+            : undefined,
+      icon: <BarChart3 className="h-4 w-4" />,
+    },
+    {
+      id: 'comps',
+      label: 'Comps & Submarket',
+      badge: String(selectedHouse.comps.length),
+      icon: <Layers className="h-4 w-4" />,
+    },
+    {
+      id: 'revenue',
+      label: 'Profit & Promotions',
+      badge:
+        decision.recommendedPromotions.length > 0
+          ? String(decision.recommendedPromotions.length)
+          : undefined,
+      icon: <Calculator className="h-4 w-4" />,
+    },
+    {
+      id: 'rules',
+      label: 'Rules & Alerts',
+      badge: String(rules.filter((r) => r.enabled).length),
+      icon: <Sliders className="h-4 w-4" />,
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-slate-800 flex flex-col font-sans">
+    <div className="flex min-h-screen flex-col bg-moisha-sand font-sans text-moisha-navy">
       <Navbar
+        selectedHouse={selectedHouse}
+        decision={decision}
         isScanning={isScanning}
-        onTriggerScan={handleTriggerScan}
+        onTriggerScan={() => void runAnalysisForHouse(selectedHouse, rules)}
         lastScannedTime={lastScannedTime}
-        agentStatus={agentStatus}
+        aiActive={aiActive}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
-        
-        {/* 1. Pocket House Selector: 1114 Florida Ave NE, DC 20002 & House 2 */}
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        {/* Portfolio Strip */}
         <PropertySelector
           houses={houses}
-          selectedHouseId={selectedHouseId}
+          selectedHouseId={selectedHouse.id}
           onSelectHouse={handleSelectHouse}
-          onEditAddress={handleEditAddress}
+          onUpdateHouse={handleUpdateHouse}
+          onAddHouse={handleAddHouse}
+          onDeleteHouse={handleDeleteHouse}
         />
 
-        {/* 2. Core Alert Banner for Selected House */}
-        <AgentAlertBanner
-          decision={decision}
-          house={selectedHouse}
-          onApplyPriceChange={handleApplyPriceChange}
-          onApplyPromotion={handleApplyPromotion}
-          onSimulateReminder={() => handleSendReminderToPM()}
-        />
+        {/* Workspace Navigation Tabs */}
+        <nav
+          aria-label="Workspace sections"
+          className="flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-moisha-border bg-white p-1.5 shadow-sm"
+        >
+          {tabs.map((tab) => {
+            const isCurrent = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${
+                  isCurrent
+                    ? 'bg-moisha-navy text-white shadow-sm'
+                    : 'text-moisha-muted hover:bg-moisha-sand hover:text-moisha-navy'
+                }`}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+                {tab.badge && (
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      isCurrent
+                        ? 'bg-white/20 text-white'
+                        : tab.badge === 'Alert'
+                          ? 'bg-moisha-butter text-moisha-amber'
+                          : 'bg-moisha-sand text-moisha-navy'
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
-        {/* 3. Live Public Market Grounding Scanner (Google Search Grounding for DC 20002) */}
-        <LiveMarketGroundingCard
-          house={selectedHouse}
-        />
+        {/* Tab 1: Overview, Benchmark & Copilot */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            <AgentAlertBanner
+              decision={decision}
+              house={selectedHouse}
+              onApplyPriceChange={handleApplyPriceChange}
+              onApplyPromotion={(promo) => handleApplyPromotion(promo)}
+              onDispatchReminder={() => handleSendReminderToPM()}
+            />
 
-        {/* 4. Airbnb Promotion Strategizer (Fix the 5 Empty Days Gap) */}
-        <PromotionPlanner
-          house={selectedHouse}
-          promotions={decision.recommendedPromotions}
-          onApplyPromotion={handleApplyPromotion}
-          onSendReminderToPM={handleSendReminderToPM}
-        />
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <MarketCharts house={selectedHouse} decision={decision} />
+              <PocketAdvisorChat
+                house={selectedHouse}
+                decision={decision}
+                aiSettings={aiSettings}
+                proxyAvailable={proxyAvailable}
+                onApplyAction={(type, value) => {
+                  if (type === 'set_price') {
+                    handleApplyPriceChange(value);
+                  } else if (decision.recommendedPromotions[0]) {
+                    handleApplyPromotion({
+                      ...decision.recommendedPromotions[0],
+                      status: 'applied',
+                    });
+                  }
+                }}
+              />
+            </div>
+          </div>
+        )}
 
-        {/* 5. Pocket Advisor Chat: PM Interactive Copilot */}
-        <PocketAdvisorChat
-          house={selectedHouse}
-          decision={decision}
-          onApplyAction={(type, val) => {
-            if (type === 'drop_price') handleApplyPriceChange(val);
-            else if (decision.recommendedPromotions[0]) handleApplyPromotion(decision.recommendedPromotions[0]);
-          }}
-        />
+        {/* Tab 2: Neighbor Comps & Submarket Grounding */}
+        {activeTab === 'comps' && (
+          <div className="space-y-6">
+            <CompsManager
+              house={selectedHouse}
+              comps={selectedHouse.comps}
+              myPrice={selectedHouse.currentPrice}
+              onUpdateComp={handleUpdateComp}
+              onAddComp={handleAddComp}
+              onDeleteComp={handleDeleteComp}
+              onSimulateNeighborUndercut={handleSimulateNeighborDrop}
+            />
+            <LiveMarketGroundingCard
+              house={selectedHouse}
+              decision={decision}
+              aiSettings={aiSettings}
+              proxyAvailable={proxyAvailable}
+            />
+          </div>
+        )}
 
-        {/* 6. Live Market Benchmark Charts */}
-        <MarketCharts
-          comps={selectedHouse.comps}
-          myListing={{
-            name: selectedHouse.title,
-            location: selectedHouse.address,
-            bedrooms: selectedHouse.bedrooms,
-            bathrooms: selectedHouse.bathrooms,
-            currentPrice: selectedHouse.currentPrice,
-            floorPrice: selectedHouse.floorPrice,
-            targetCheckIn: selectedHouse.unbookedStartDate,
-            targetCheckOut: selectedHouse.unbookedEndDate,
-            isBooked: selectedHouse.isBooked,
-            cleaningFee: selectedHouse.cleaningFee,
-          }}
-          recommendedPrice={decision.recommendedPrice}
-        />
+        {/* Tab 3: Revenue Calculator & Promotions */}
+        {activeTab === 'revenue' && (
+          <div className="space-y-6">
+            <RevenueCalculator
+              house={selectedHouse}
+              decision={decision}
+              onUpdateHouseCosts={(updates) => handleUpdateHouse(selectedHouse.id, updates)}
+              onApplyPrice={handleApplyPriceChange}
+            />
+            <PromotionPlanner
+              house={selectedHouse}
+              promotions={decision.recommendedPromotions}
+              effectiveFloorPrice={decision.effectiveFloorPrice}
+              onApplyPromotion={handleApplyPromotion}
+              onSendReminderToPM={(promo) => handleSendReminderToPM(promo)}
+            />
+          </div>
+        )}
 
-        {/* 7. Handpicked Neighbor Comps Manager (Florida Ave, Orren St, H St NE) */}
-        <CompsManager
-          house={selectedHouse}
-          comps={selectedHouse.comps}
-          myPrice={selectedHouse.currentPrice}
-          onUpdateComp={handleUpdateComp}
-          onAddComp={handleAddComp}
-          onDeleteComp={handleDeleteComp}
-          onSimulateNeighborUndercut={handleSimulateNeighborDrop}
-        />
-
-        {/* 8. Moisha Autonomous Rules Engine */}
-        <RuleEngineCard
-          rules={rules}
-          onToggleRule={(id) => setRules((r) => r.map((item) => (item.id === id ? { ...item, enabled: !item.enabled } : item)))}
-          onUpdateParam={(id, val) => setRules((r) => r.map((item) => (item.id === id ? { ...item, parameterValue: val } : item)))}
-          myListing={{
-            name: selectedHouse.title,
-            location: selectedHouse.address,
-            bedrooms: selectedHouse.bedrooms,
-            bathrooms: selectedHouse.bathrooms,
-            currentPrice: selectedHouse.currentPrice,
-            floorPrice: selectedHouse.floorPrice,
-            targetCheckIn: selectedHouse.unbookedStartDate,
-            targetCheckOut: selectedHouse.unbookedEndDate,
-            isBooked: selectedHouse.isBooked,
-            cleaningFee: selectedHouse.cleaningFee,
-          }}
-          onUpdateListingFloor={(floor) => setHouses((prev) => prev.map((h) => (h.id === selectedHouseId ? { ...h, floorPrice: floor } : h)))}
-          onUpdateListingPrice={(price) => setHouses((prev) => prev.map((h) => (h.id === selectedHouseId ? { ...h, currentPrice: price } : h)))}
-        />
-
-        {/* 9. Alert Dispatch & Reminder Logs */}
-        <NotificationCenter
-          logs={logs}
-          decision={decision}
-          myListing={{
-            name: selectedHouse.title,
-            location: selectedHouse.address,
-            bedrooms: selectedHouse.bedrooms,
-            bathrooms: selectedHouse.bathrooms,
-            currentPrice: selectedHouse.currentPrice,
-            floorPrice: selectedHouse.floorPrice,
-            targetCheckIn: selectedHouse.unbookedStartDate,
-            targetCheckOut: selectedHouse.unbookedEndDate,
-            isBooked: selectedHouse.isBooked,
-            cleaningFee: selectedHouse.cleaningFee,
-          }}
-          onSendCustomNotification={handleSendCustomNotification}
-        />
-
-        {/* 10. Deployment Code & Cron Automation */}
-        <AutomationExporter
-          myListing={{
-            name: selectedHouse.title,
-            location: selectedHouse.address,
-            bedrooms: selectedHouse.bedrooms,
-            bathrooms: selectedHouse.bathrooms,
-            currentPrice: selectedHouse.currentPrice,
-            floorPrice: selectedHouse.floorPrice,
-            targetCheckIn: selectedHouse.unbookedStartDate,
-            targetCheckOut: selectedHouse.unbookedEndDate,
-            isBooked: selectedHouse.isBooked,
-            cleaningFee: selectedHouse.cleaningFee,
-          }}
-          comps={selectedHouse.comps}
-        />
-
+        {/* Tab 4: Rules Engine & Alert Dispatch */}
+        {activeTab === 'rules' && (
+          <div className="space-y-6">
+            <RuleEngineCard
+              house={selectedHouse}
+              rules={rules}
+              onToggleRule={(id) => {
+                setAiDecisionOverride(null);
+                setRules((prev) =>
+                  prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)),
+                );
+              }}
+              onUpdateParam={(id, val) => {
+                setAiDecisionOverride(null);
+                setRules((prev) =>
+                  prev.map((r) => (r.id === id ? { ...r, parameterValue: val } : r)),
+                );
+              }}
+              onUpdateHouse={(updates) => handleUpdateHouse(selectedHouse.id, updates)}
+            />
+            <NotificationCenter
+              logs={logs}
+              decision={decision}
+              house={selectedHouse}
+              onSendCustomNotification={(ch, text) =>
+                void handleSendCustomNotification(ch, text)
+              }
+            />
+          </div>
+        )}
       </main>
 
-      <footer className="border-t border-[#E8DFD3] bg-white py-6 text-center text-xs text-slate-500 font-mono">
-        Moisha Pocket AI • 1114 Florida Ave NE, Washington, DC 20002 • Wise Real Estate Mindset • Shalom & High Occupancy
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        aiSettings={aiSettings}
+        proxyAvailable={proxyAvailable}
+        proxyModel={proxyModel}
+        onUpdateSettings={(updates) =>
+          setAiSettings((prev) => ({ ...prev, ...updates }))
+        }
+        onResetDemoData={handleResetDemoData}
+      />
+
+      <footer className="mt-10 border-t border-moisha-border bg-white py-5 text-center text-xs text-moisha-muted">
+        Moisha Pocket Advisor · Neighborhood Rental Pricing, Floor Guardrails & Profit Calculator
       </footer>
     </div>
   );

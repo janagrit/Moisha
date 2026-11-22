@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
+import { ExternalLink, Star, Plus, Trash2, RefreshCw, MapPin, X } from 'lucide-react';
 import { ListingComp, PropertyHouse } from '../types';
-import { ExternalLink, Star, Plus, Trash2, ArrowDown, ArrowUp, RefreshCw, MapPin } from 'lucide-react';
 
 interface CompsManagerProps {
   house: PropertyHouse;
@@ -19,7 +19,7 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
   onUpdateComp,
   onAddComp,
   onDeleteComp,
-  onSimulateNeighborUndercut
+  onSimulateNeighborUndercut,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
@@ -32,21 +32,22 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
+    const priceNum = Math.max(50, Number(newPrice) || 215);
 
     onAddComp({
-      name: newName,
-      address: newAddress || `${house.neighborhood}`,
-      airbnbUrl: newUrl || 'https://airbnb.com/rooms/sample',
-      bedrooms: Number(newBeds) || house.bedrooms,
-      bathrooms: 2,
-      rating: Number(newRating) || 4.9,
+      name: newName.trim(),
+      address: newAddress.trim() || house.neighborhood,
+      airbnbUrl: newUrl.trim() || 'https://www.airbnb.com',
+      bedrooms: Math.max(0, Number(newBeds) || house.bedrooms),
+      bathrooms: house.bathrooms,
+      rating: Math.min(5, Math.max(1, Number(newRating) || 4.9)),
       reviewsCount: 45,
-      currentPrice: Number(newPrice) || 215,
-      originalPrice: Number(newPrice) || 215,
+      currentPrice: priceNum,
+      originalPrice: priceNum,
       isBooked: false,
-      distanceMiles: 0.1,
+      distanceMiles: 0.12,
       superhost: true,
-      priceHistory: [{ date: 'Today', price: Number(newPrice) || 215 }]
+      priceHistory: [{ date: 'Today', price: priceNum }],
     });
 
     setNewName('');
@@ -56,256 +57,299 @@ export const CompsManager: React.FC<CompsManagerProps> = ({
   };
 
   return (
-    <div className="bg-white border border-[#E8DFD3] rounded-3xl p-6 shadow-sm">
-      
+    <section aria-label="Comparable neighbor listings" className="card p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-serif font-bold text-blue-950">Neighboring Comps around {house.address.split(',')[0]}</h3>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-stone-100 text-slate-700 font-mono font-bold">
-              {comps.length} monitored
+            <h3 className="text-base font-bold text-moisha-navy">
+              Comparable Neighbors Around {house.address.split(',')[0]}
+            </h3>
+            <span className="rounded-full bg-moisha-sand px-2.5 py-0.5 text-xs font-bold text-moisha-navy border border-moisha-border">
+              {comps.length} tracked
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Handpicked neighbors on Florida Ave NE, Orren St, and H St NE.
+          <p className="mt-0.5 text-xs text-moisha-muted">
+            {house.neighborhood} ({house.zipCode}) · Adjust any comp price or status to see Moisha recalculate live.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
+            type="button"
             onClick={onSimulateNeighborUndercut}
-            title="Simulate immediate neighbor dropping price to trigger Moisha alert"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-colors shadow-2xs"
+            disabled={comps.length === 0}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-moisha-butter px-3 py-2 text-xs font-bold text-moisha-amber transition-colors hover:bg-amber-200/70 disabled:opacity-40"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-amber-700" />
-            <span>Simulate Neighbor Price Drop</span>
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span>Simulate Neighbor Drop (-$25)</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-700 hover:bg-blue-800 text-white transition-colors shadow-xs"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-moisha-navy px-3.5 py-2 text-xs font-bold text-white transition-colors hover:bg-blue-950"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="h-3.5 w-3.5" />
             <span>Add Neighbor</span>
           </button>
         </div>
       </div>
 
       {/* Comps Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {comps.map((comp) => {
-          const deltaVsMe = comp.currentPrice - myPrice;
-          const isUndercutting = !comp.isBooked && deltaVsMe < 0;
+      {comps.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-moisha-border bg-moisha-sand p-8 text-center text-xs text-moisha-muted">
+          No comparable listings tracked yet. Click <strong>Add Neighbor</strong> to benchmark your nightly rate.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {comps.map((comp) => {
+            const deltaVsMe = comp.currentPrice - myPrice;
+            const isUndercutting = !comp.isBooked && deltaVsMe < 0;
 
-          return (
-            <div
-              key={comp.id}
-              className={`rounded-2xl p-4 border transition-all flex flex-col justify-between ${
-                comp.isBooked
-                  ? 'bg-stone-50/60 border-stone-200 opacity-75'
-                  : isUndercutting
-                  ? 'bg-amber-50/60 border-amber-300 shadow-xs'
-                  : 'bg-[#FAF8F5] border-stone-200'
-              }`}
-            >
-              <div>
-                <div className="flex items-start justify-between gap-2 mb-1.5">
-                  <h4 className="text-sm font-serif font-bold text-slate-800 line-clamp-1" title={comp.name}>
-                    {comp.name}
-                  </h4>
-                  <button
-                    onClick={() => onDeleteComp(comp.id)}
-                    title="Remove comp"
-                    className="text-slate-400 hover:text-rose-600 p-1 shrink-0"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {comp.address && (
-                  <div className="flex items-center gap-1 text-[11px] text-slate-600 font-mono mb-2">
-                    <MapPin className="w-3 h-3 text-amber-700 shrink-0" />
-                    <span className="truncate">{comp.address}</span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2 text-[11px] text-slate-500 mb-2">
-                  <span>{comp.bedrooms} Bed • {comp.bathrooms} Bath</span>
-                  <span>•</span>
-                  <span>{comp.distanceMiles} mi away</span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs py-1.5 border-y border-stone-200 my-2">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                    <span className="font-semibold text-slate-800">{comp.rating}</span>
-                    <span className="text-slate-400 text-[10px]">({comp.reviewsCount})</span>
+            return (
+              <div
+                key={comp.id}
+                className={`flex flex-col justify-between rounded-2xl border p-4 transition-all ${
+                  comp.isBooked
+                    ? 'border-moisha-border bg-moisha-sand/50 opacity-85'
+                    : isUndercutting
+                      ? 'border-amber-300 bg-moisha-butter/40'
+                      : 'border-moisha-border bg-moisha-sand/80'
+                }`}
+              >
+                <div>
+                  <div className="mb-1.5 flex items-start justify-between gap-2">
+                    <h4
+                      className="line-clamp-1 text-sm font-bold text-moisha-navy"
+                      title={comp.name}
+                    >
+                      {comp.name}
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteComp(comp.id)}
+                      aria-label={`Remove ${comp.name}`}
+                      className="shrink-0 rounded p-1 text-moisha-muted hover:text-moisha-red"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
 
-                  <button
-                    onClick={() => onUpdateComp(comp.id, { isBooked: !comp.isBooked })}
-                    className={`text-[10px] font-mono px-2 py-0.5 rounded-lg border transition-colors font-bold ${
-                      comp.isBooked
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                        : 'bg-amber-100 text-amber-900 border-amber-300'
-                    }`}
-                  >
-                    {comp.isBooked ? '✓ Booked' : '○ Vacant'}
-                  </button>
-                </div>
+                  {comp.address && (
+                    <div className="mb-2 flex items-center gap-1 text-[11px] text-moisha-muted">
+                      <MapPin className="h-3 w-3 shrink-0 text-moisha-amber" />
+                      <span className="truncate">{comp.address}</span>
+                    </div>
+                  )}
 
-                {/* Price Display */}
-                <div className="flex items-center justify-between my-2">
-                  <div>
-                    <span className="text-[10px] uppercase font-mono text-slate-400 block font-bold">Rate</span>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-lg font-bold text-slate-900 font-mono">${comp.currentPrice}</span>
-                      <span className="text-[11px] text-slate-400">/nt</span>
+                  <div className="mb-2 text-[11px] text-moisha-muted">
+                    {comp.bedrooms} BR · {comp.bathrooms} BA · {comp.distanceMiles} mi
+                  </div>
+
+                  <div className="my-2 flex items-center justify-between border-y border-moisha-border py-1.5 text-xs">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />
+                      <span className="font-bold text-moisha-navy">{comp.rating}</span>
+                      <span className="text-[10px] text-moisha-muted">({comp.reviewsCount})</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onUpdateComp(comp.id, { isBooked: !comp.isBooked })}
+                      className={`rounded-lg border px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                        comp.isBooked
+                          ? 'border-emerald-200 bg-moisha-mint text-moisha-green'
+                          : 'border-amber-300 bg-moisha-butter text-moisha-amber'
+                      }`}
+                    >
+                      {comp.isBooked ? '✓ Booked' : '○ Vacant'}
+                    </button>
+                  </div>
+
+                  {/* Price Row */}
+                  <div className="my-2 flex items-center justify-between">
+                    <div>
+                      <span className="block text-[10px] font-bold text-moisha-muted uppercase">
+                        Rate
+                      </span>
+                      <span className="text-lg font-extrabold text-moisha-navy">
+                        ${comp.currentPrice}
+                      </span>
+                      <span className="text-[11px] text-moisha-muted">/nt</span>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="block text-[10px] font-bold text-moisha-muted uppercase">
+                        Vs You
+                      </span>
+                      <span
+                        className={`text-xs font-bold ${
+                          isUndercutting
+                            ? 'text-moisha-amber'
+                            : deltaVsMe > 0
+                              ? 'text-moisha-green'
+                              : 'text-moisha-muted'
+                        }`}
+                      >
+                        {deltaVsMe < 0
+                          ? `-$${Math.abs(deltaVsMe)}`
+                          : deltaVsMe > 0
+                            ? `+$${deltaVsMe}`
+                            : 'Equal'}
+                      </span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="text-right font-mono">
-                    <span className="text-[10px] uppercase text-slate-400 block font-bold">Vs Your Rate</span>
-                    <span className={`text-xs font-bold flex items-center justify-end gap-0.5 ${
-                      isUndercutting ? 'text-amber-800' : 'text-slate-600'
-                    }`}>
-                      {deltaVsMe < 0 ? (
-                        <>
-                          <ArrowDown className="w-3 h-3 text-amber-700" />
-                          -${Math.abs(deltaVsMe)}
-                        </>
-                      ) : deltaVsMe > 0 ? (
-                        <>
-                          <ArrowUp className="w-3 h-3 text-emerald-600" />
-                          +${deltaVsMe}
-                        </>
-                      ) : (
-                        'Equal'
-                      )}
-                    </span>
+                {/* Quick Adjust Controls */}
+                <div className="mt-2 flex items-center justify-between border-t border-moisha-border pt-2">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateComp(comp.id, {
+                          currentPrice: Math.max(95, comp.currentPrice - 15),
+                        })
+                      }
+                      className="rounded-md border border-moisha-border bg-white px-2 py-0.5 text-[11px] font-bold text-moisha-navy hover:bg-moisha-sand"
+                    >
+                      -$15
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateComp(comp.id, { currentPrice: comp.currentPrice + 15 })
+                      }
+                      className="rounded-md border border-moisha-border bg-white px-2 py-0.5 text-[11px] font-bold text-moisha-navy hover:bg-moisha-sand"
+                    >
+                      +$15
+                    </button>
                   </div>
+
+                  <a
+                    href={comp.airbnbUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-moisha-royal hover:underline"
+                  >
+                    <span>Listing</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
                 </div>
               </div>
-
-              {/* Adjust controls */}
-              <div className="flex items-center justify-between gap-1 mt-2 pt-2 border-t border-stone-200">
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => onUpdateComp(comp.id, { currentPrice: Math.max(140, comp.currentPrice - 20) })}
-                    className="px-2 py-0.5 text-[10px] rounded-md bg-white hover:bg-stone-100 text-slate-700 border border-stone-300 font-mono font-bold"
-                    title="Simulate drop"
-                  >
-                    -$20
-                  </button>
-                  <button
-                    onClick={() => onUpdateComp(comp.id, { currentPrice: comp.currentPrice + 20 })}
-                    className="px-2 py-0.5 text-[10px] rounded-md bg-white hover:bg-stone-100 text-slate-700 border border-stone-300 font-mono font-bold"
-                    title="Simulate increase"
-                  >
-                    +$20
-                  </button>
-                </div>
-
-                <a
-                  href={comp.airbnbUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] text-blue-700 hover:text-blue-900 flex items-center gap-1 font-medium"
-                >
-                  <span>Airbnb</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Add Comp Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-stone-200 rounded-3xl w-full max-w-md p-6 shadow-xl">
-            <h3 className="text-lg font-serif font-bold text-blue-950 mb-1">Add Neighbor to Florida Ave Watch</h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Enter details of the adjacent house or building competing for your dates.
-            </p>
-
-            <form onSubmit={handleCreate} className="space-y-3.5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-moisha-border bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">Listing Title / Nickname</label>
+                <h3 className="text-base font-bold text-moisha-navy">Add Neighbor Comp</h3>
+                <p className="text-xs text-moisha-muted">
+                  Track a competing rental near {house.nickname}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                aria-label="Close modal"
+                className="rounded-lg p-1 text-moisha-muted hover:bg-moisha-sand"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreate} className="space-y-3">
+              <div>
+                <label className="label">Listing Name *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. 1108 Florida Ave Rowhome"
+                  placeholder="e.g. Modern 3BR Garden Suite"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-[#FAF8F5] border border-stone-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-600"
+                  className="field text-sm"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">Street Address</label>
+                <label className="label">Street / Distance Note</label>
                 <input
                   type="text"
-                  placeholder="e.g. 1108 Florida Ave NE (3 doors down)"
+                  placeholder="e.g. 2 doors down"
                   value={newAddress}
                   onChange={(e) => setNewAddress(e.target.value)}
-                  className="w-full bg-[#FAF8F5] border border-stone-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-600 font-mono text-xs"
+                  className="field text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="label">Listing URL (optional)</label>
+                <input
+                  type="url"
+                  placeholder="https://www.airbnb.com/rooms/..."
+                  value={newUrl}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  className="field text-sm"
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Price ($/nt)</label>
+                  <label className="label">Price ($/nt)</label>
                   <input
                     type="number"
+                    min={50}
                     value={newPrice}
                     onChange={(e) => setNewPrice(e.target.value)}
-                    className="w-full bg-[#FAF8F5] border border-stone-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-600 font-mono"
+                    className="field text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Bedrooms</label>
+                  <label className="label">Bedrooms</label>
                   <input
                     type="number"
+                    min={0}
                     value={newBeds}
                     onChange={(e) => setNewBeds(e.target.value)}
-                    className="w-full bg-[#FAF8F5] border border-stone-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-600 font-mono"
+                    className="field text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Rating</label>
+                  <label className="label">Rating</label>
                   <input
                     type="number"
                     step="0.01"
+                    min={1}
+                    max={5}
                     value={newRating}
                     onChange={(e) => setNewRating(e.target.value)}
-                    className="w-full bg-[#FAF8F5] border border-stone-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-600 font-mono"
+                    className="field text-sm"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3">
+              <div className="flex justify-end gap-2 border-t border-moisha-border pt-4">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800"
+                  className="btn-quiet text-xs"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-xs font-bold bg-blue-700 hover:bg-blue-800 text-white rounded-xl shadow-xs"
-                >
-                  Save Neighbor Comp
+                <button type="submit" className="btn-primary text-xs">
+                  Save Neighbor
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-    </div>
+    </section>
   );
 };

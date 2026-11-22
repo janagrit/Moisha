@@ -1,102 +1,133 @@
 import React from 'react';
-import { Bot, Clock, Play, Sparkles, Coins, ShieldCheck } from 'lucide-react';
+import { Play, Sparkles, Settings } from 'lucide-react';
+import { AgentDecision, PropertyHouse } from '../types';
 
 interface NavbarProps {
+  selectedHouse: PropertyHouse;
+  decision: AgentDecision;
   isScanning: boolean;
   onTriggerScan: () => void;
   lastScannedTime: string | null;
-  agentStatus: 'standby' | 'scanning' | 'alert' | 'ok';
+  aiActive: boolean;
+  onOpenSettings: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
+  selectedHouse,
+  decision,
   isScanning,
   onTriggerScan,
   lastScannedTime,
-  agentStatus
+  aiActive,
+  onOpenSettings,
 }) => {
+  const statusDotClass = isScanning
+    ? 'bg-moisha-royal'
+    : decision.status === 'ALERT'
+      ? 'bg-amber-600'
+      : decision.status === 'UPSIDE'
+        ? 'bg-moisha-royal'
+        : 'bg-moisha-green';
+
+  const statusText = isScanning
+    ? `Analyzing ${selectedHouse.nickname}...`
+    : decision.status === 'ALERT'
+      ? `${selectedHouse.unbookedDaysCount} Empty Nights Need Action`
+      : decision.status === 'UPSIDE'
+        ? `+${decision.percentDelta}% Rate Upside Available`
+        : 'Neighborhood Rate In Harmony';
+
   return (
-    <header className="border-b border-amber-200/80 bg-white/95 backdrop-blur-md sticky top-0 z-40 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        
+    <header className="sticky top-0 z-40 border-b border-moisha-border bg-white/95 backdrop-blur">
+      <div className="mx-auto flex h-18 max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         {/* Brand */}
-        <div className="flex items-center gap-3.5">
+        <div className="flex min-w-0 items-center gap-3">
           <img
-            src="moisha-logo.png"
+            src="./moisha-logo.png"
             alt="Moisha"
-            width={56}
-            height={56}
-            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full shrink-0 select-none"
+            width={48}
+            height={48}
+            className="h-11 w-11 shrink-0 rounded-full border border-moisha-border object-cover select-none sm:h-12 sm:w-12"
           />
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-serif font-extrabold text-2xl tracking-tight text-blue-950">
+              <span className="text-lg font-extrabold tracking-tight text-moisha-navy sm:text-xl">
                 MOISHA
               </span>
-              <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300/80 uppercase tracking-wider font-bold shadow-xs">
-                Wise Pocket Advisor
+              <span className="hidden rounded-full border border-amber-300 bg-moisha-butter px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-moisha-amber uppercase sm:inline-block">
+                Pocket Advisor
               </span>
             </div>
-            <p className="text-xs text-slate-500 hidden sm:block font-medium">
-              Real Estate Savvy • Neighbor Rate Sentinel • 1114 Florida Ave NE
+            <p className="truncate text-xs text-moisha-muted">
+              {selectedHouse.nickname} · {selectedHouse.neighborhood}
             </p>
           </div>
         </div>
 
-        {/* Center: Moisha's Watch Status */}
-        <div className="hidden md:flex items-center gap-3 px-4 py-2 rounded-2xl bg-[#FAF8F5] border border-amber-200/70 text-xs shadow-xs">
+        {/* Center Status Pill */}
+        <div className="hidden items-center gap-3 rounded-2xl border border-moisha-border bg-moisha-sand px-3.5 py-2 text-xs lg:flex">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                agentStatus === 'alert' ? 'bg-amber-400' : isScanning ? 'bg-blue-400' : 'bg-emerald-400'
-              }`}></span>
-              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                agentStatus === 'alert' ? 'bg-amber-600' : isScanning ? 'bg-blue-600' : 'bg-emerald-600'
-              }`}></span>
+              <span
+                className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${statusDotClass}`}
+              />
+              <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${statusDotClass}`} />
             </span>
-            <span className="text-slate-700 font-semibold">
-              {isScanning ? 'Moisha is checking Florida Ave neighbors...' : agentStatus === 'alert' ? 'Oy Vey: 5 Empty Days Need Action' : 'Market In Harmony'}
-            </span>
+            <span className="font-semibold text-moisha-navy">{statusText}</span>
           </div>
-
-          <span className="text-slate-300">|</span>
-
-          <div className="flex items-center gap-1.5 text-slate-500">
-            <Clock className="w-3.5 h-3.5 text-amber-700" />
-            <span>Morning Review: <strong className="text-slate-800">8:00 AM</strong></span>
-          </div>
+          <span className="text-moisha-border">|</span>
+          <span
+            className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+              aiActive
+                ? 'bg-moisha-sky text-moisha-royal'
+                : 'bg-white text-moisha-muted border border-moisha-border'
+            }`}
+          >
+            {aiActive ? 'Gemini AI + Guardrails' : 'Local Math Engine'}
+          </span>
         </div>
 
-        {/* Right Actions */}
-        <div className="flex items-center gap-3">
+        {/* Right Controls */}
+        <div className="flex items-center gap-2">
           {lastScannedTime && (
-            <span className="text-xs text-slate-500 hidden lg:inline-block font-mono bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">
-              Checked: {lastScannedTime}
+            <span className="hidden rounded-lg border border-moisha-border bg-moisha-sand px-2.5 py-1.5 text-xs font-medium text-moisha-muted xl:inline-block">
+              Updated {lastScannedTime}
             </span>
           )}
 
           <button
+            type="button"
+            onClick={onOpenSettings}
+            aria-label="Open settings"
+            title="AI & Portfolio Settings"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-moisha-border bg-white text-moisha-navy transition-colors hover:bg-moisha-sand"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+
+          <button
+            type="button"
             onClick={onTriggerScan}
             disabled={isScanning}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm ${
+            className={`inline-flex h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-all sm:px-4 sm:text-sm ${
               isScanning
-                ? 'bg-stone-100 text-stone-400 cursor-not-allowed border border-stone-300'
-                : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900 text-white shadow-blue-900/20 active:scale-95 ring-1 ring-blue-950'
+                ? 'cursor-not-allowed border border-moisha-border bg-moisha-sand text-moisha-muted'
+                : 'bg-moisha-navy text-white shadow-sm hover:bg-blue-950 active:scale-[0.98]'
             }`}
           >
             {isScanning ? (
               <>
-                <Sparkles className="w-4 h-4 animate-spin text-amber-300" />
-                <span>Moisha is analyzing...</span>
+                <Sparkles className="h-4 w-4 animate-spin text-amber-300" />
+                <span>Analyzing...</span>
               </>
             ) : (
               <>
-                <Play className="w-4 h-4 fill-current text-amber-300" />
-                <span>Consult Uncle Moisha</span>
+                <Play className="h-3.5 w-3.5 fill-current text-amber-300" />
+                <span>Consult Moisha</span>
               </>
             )}
           </button>
         </div>
-
       </div>
     </header>
   );

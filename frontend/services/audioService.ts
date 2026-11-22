@@ -1,12 +1,14 @@
 // Audio feedback utility using native Web Audio API
 export const playAlertSound = () => {
   try {
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) return;
-    
+
     const ctx = new AudioContextClass();
     const now = ctx.currentTime;
-    
+
     // Smooth chime chord (F5 + C6)
     const osc1 = ctx.createOscillator();
     const osc2 = ctx.createOscillator();
@@ -14,10 +16,10 @@ export const playAlertSound = () => {
 
     osc1.type = 'sine';
     osc1.frequency.setValueAtTime(698.46, now); // F5
-    osc1.frequency.exponentialRampToValueAtTime(880.00, now + 0.15); // A5
+    osc1.frequency.exponentialRampToValueAtTime(880.0, now + 0.15); // A5
 
     osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(1046.50, now); // C6
+    osc2.frequency.setValueAtTime(1046.5, now); // C6
     osc2.frequency.exponentialRampToValueAtTime(1318.51, now + 0.15); // E6
 
     gainNode.gain.setValueAtTime(0, now);
@@ -27,6 +29,10 @@ export const playAlertSound = () => {
     osc1.connect(gainNode);
     osc2.connect(gainNode);
     gainNode.connect(ctx.destination);
+
+    osc2.onended = () => {
+      void ctx.close().catch(() => {});
+    };
 
     osc1.start(now);
     osc2.start(now);

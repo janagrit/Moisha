@@ -1,222 +1,337 @@
-import { PropertyHouse, PricingRule } from './types';
+import { PropertyHouse, PricingRule, AiSettings } from './types';
 
-export const INITIAL_HOUSES: PropertyHouse[] = [
-  {
-    id: "house-1",
-    nickname: "House 1 (1114 Florida Ave NE)",
-    title: "Historic Florida Ave Rowhome - 3BR Modern Brownstone",
-    address: "1114 Florida Ave NE, Washington, DC 20002",
-    neighborhood: "H Street Corridor / Near Northeast, Washington, DC",
-    zipCode: "20002",
-    bedrooms: 3,
-    bathrooms: 2.5,
-    currentPrice: 285, // Current rate
-    floorPrice: 195, // Safety floor
-    cleaningFee: 145,
-    unbookedDaysCount: 5, // The 5 empty days
-    unbookedStartDate: "2025-04-16",
-    unbookedEndDate: "2025-04-21",
-    isBooked: false,
-    propertyManagerName: "Carlos R. (Lead PM)",
-    managerPhone: "+1 (202) 555-0189",
-    activePromotion: null,
-    comps: [
-      {
-        id: "comp-dc-1",
-        name: "Direct Neighbor: 1108 Florida Ave NE Rowhome",
-        address: "1108 Florida Ave NE (3 doors down)",
-        airbnbUrl: "https://airbnb.com/rooms/1108florida",
-        bedrooms: 3,
-        bathrooms: 2,
-        rating: 4.93,
-        reviewsCount: 118,
-        currentPrice: 215, // Neighbor dropped to 215!
-        originalPrice: 270,
-        isBooked: false,
-        distanceMiles: 0.02,
-        superhost: true,
-        priceHistory: [
-          { date: "4 days ago", price: 270 },
-          { date: "2 days ago", price: 240 },
-          { date: "Today", price: 215 }
-        ]
-      },
-      {
-        id: "comp-dc-2",
-        name: "1206 Orren St NE Designer 3BR Suite",
-        address: "1206 Orren St NE (1 block away)",
-        airbnbUrl: "https://airbnb.com/rooms/1206orren",
-        bedrooms: 3,
-        bathrooms: 2.5,
-        rating: 4.88,
-        reviewsCount: 76,
-        currentPrice: 225,
-        originalPrice: 260,
-        isBooked: false,
-        distanceMiles: 0.1,
-        superhost: false,
-        priceHistory: [
-          { date: "4 days ago", price: 260 },
-          { date: "2 days ago", price: 235 },
-          { date: "Today", price: 225 }
-        ]
-      },
-      {
-        id: "comp-dc-3",
-        name: "1310 H St NE Luxury Balcony Suite",
-        address: "1310 H St NE (Dining corridor)",
-        airbnbUrl: "https://airbnb.com/rooms/1310hstreet",
-        bedrooms: 3,
-        bathrooms: 2,
-        rating: 4.96,
-        reviewsCount: 224,
-        currentPrice: 310,
-        originalPrice: 310,
-        isBooked: true, // Booked!
-        distanceMiles: 0.3,
-        superhost: true,
-        priceHistory: [
-          { date: "4 days ago", price: 310 },
-          { date: "Today", price: 310 }
-        ]
-      },
-      {
-        id: "comp-dc-4",
-        name: "1022 Montello Ave NE Charming 3-Bed",
-        address: "1022 Montello Ave NE",
-        airbnbUrl: "https://airbnb.com/rooms/1022montello",
-        bedrooms: 3,
-        bathrooms: 2,
-        rating: 4.81,
-        reviewsCount: 44,
-        currentPrice: 210,
-        originalPrice: 250,
-        isBooked: false,
-        distanceMiles: 0.2,
-        superhost: false,
-        priceHistory: [
-          { date: "4 days ago", price: 250 },
-          { date: "Today", price: 210 }
-        ]
-      }
-    ]
-  },
-  {
-    id: "house-2",
-    nickname: "House 2 (Capitol Hill North)",
-    title: "Historic Victorian Flat by Eastern Market & Capitol",
-    address: "418 8th St NE, Washington, DC 20002",
-    neighborhood: "Capitol Hill / Near Eastern Market",
-    zipCode: "20002",
-    bedrooms: 2,
-    bathrooms: 2,
-    currentPrice: 265,
-    floorPrice: 180,
-    cleaningFee: 125,
-    unbookedDaysCount: 3, // 3 empty days
-    unbookedStartDate: "2025-04-22",
-    unbookedEndDate: "2025-04-25",
-    isBooked: false,
-    propertyManagerName: "Carlos R. (Lead PM)",
-    managerPhone: "+1 (202) 555-0189",
-    activePromotion: null,
-    comps: [
-      {
-        id: "comp-dc-2-1",
-        name: "Neighbor 412 8th St NE Garden 2BR",
-        address: "412 8th St NE (Same block)",
-        airbnbUrl: "https://airbnb.com/rooms/4128thst",
-        bedrooms: 2,
-        bathrooms: 2,
-        rating: 4.92,
-        reviewsCount: 139,
-        currentPrice: 215,
-        originalPrice: 255,
-        isBooked: false,
-        distanceMiles: 0.03,
-        superhost: true,
-        priceHistory: [
-          { date: "3 days ago", price: 255 },
-          { date: "Today", price: 215 }
-        ]
-      },
-      {
-        id: "comp-dc-2-2",
-        name: "710 Constitution Ave NE Brownstone",
-        address: "710 Constitution Ave NE",
-        airbnbUrl: "https://airbnb.com/rooms/710const",
-        bedrooms: 2,
-        bathrooms: 1.5,
-        rating: 4.89,
-        reviewsCount: 92,
-        currentPrice: 230,
-        originalPrice: 245,
-        isBooked: false,
-        distanceMiles: 0.25,
-        superhost: false,
-        priceHistory: [
-          { date: "3 days ago", price: 245 },
-          { date: "Today", price: 230 }
-        ]
-      },
-      {
-        id: "comp-dc-2-3",
-        name: "Union Station Historic Carriage House",
-        address: "215 F St NE",
-        airbnbUrl: "https://airbnb.com/rooms/215fst",
-        bedrooms: 2,
-        bathrooms: 2,
-        rating: 4.97,
-        reviewsCount: 180,
-        currentPrice: 280,
-        originalPrice: 280,
-        isBooked: true,
-        distanceMiles: 0.45,
-        superhost: true,
-        priceHistory: [
-          { date: "3 days ago", price: 280 },
-          { date: "Today", price: 280 }
-        ]
-      }
-    ]
-  }
-];
+export function addDaysIso(baseDate: Date, offsetDays: number): string {
+  const next = new Date(baseDate);
+  next.setDate(next.getDate() + offsetDays);
+  const year = next.getFullYear();
+  const month = String(next.getMonth() + 1).padStart(2, '0');
+  const day = String(next.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function createInitialHouses(baseDate: Date = new Date()): PropertyHouse[] {
+  return [
+    {
+      id: 'house-1',
+      nickname: '1114 Florida Ave NE',
+      title: 'Historic Florida Ave Rowhome · 3BR Modern Brownstone',
+      address: '1114 Florida Ave NE, Washington, DC 20002',
+      neighborhood: 'H Street Corridor / Near Northeast',
+      zipCode: '20002',
+      bedrooms: 3,
+      bathrooms: 2.5,
+      currentPrice: 285,
+      floorPrice: 195,
+      cleaningFee: 145,
+      cleaningCost: 130,
+      nightlyFixedCost: 135,
+      hostServiceFeePercent: 3,
+      unbookedDaysCount: 5,
+      unbookedStartDate: addDaysIso(baseDate, 2),
+      unbookedEndDate: addDaysIso(baseDate, 7),
+      isBooked: false,
+      propertyManagerName: 'Carlos R.',
+      managerPhone: '+1 (202) 555-0189',
+      activePromotion: null,
+      comps: [
+        {
+          id: 'comp-dc-1',
+          name: '1108 Florida Ave NE Rowhome',
+          address: '1108 Florida Ave NE (3 doors down)',
+          airbnbUrl: 'https://www.airbnb.com/s/Washington--DC',
+          bedrooms: 3,
+          bathrooms: 2,
+          rating: 4.93,
+          reviewsCount: 118,
+          currentPrice: 215,
+          originalPrice: 270,
+          isBooked: false,
+          distanceMiles: 0.02,
+          superhost: true,
+          priceHistory: [
+            { date: '4d ago', price: 270 },
+            { date: '2d ago', price: 240 },
+            { date: 'Today', price: 215 },
+          ],
+        },
+        {
+          id: 'comp-dc-2',
+          name: '1206 Orren St NE Designer 3BR',
+          address: '1206 Orren St NE (1 block away)',
+          airbnbUrl: 'https://www.airbnb.com/s/Washington--DC',
+          bedrooms: 3,
+          bathrooms: 2.5,
+          rating: 4.88,
+          reviewsCount: 76,
+          currentPrice: 225,
+          originalPrice: 260,
+          isBooked: false,
+          distanceMiles: 0.1,
+          superhost: false,
+          priceHistory: [
+            { date: '4d ago', price: 260 },
+            { date: '2d ago', price: 235 },
+            { date: 'Today', price: 225 },
+          ],
+        },
+        {
+          id: 'comp-dc-3',
+          name: '1310 H St NE Balcony Suite',
+          address: '1310 H St NE (Dining corridor)',
+          airbnbUrl: 'https://www.airbnb.com/s/Washington--DC',
+          bedrooms: 3,
+          bathrooms: 2,
+          rating: 4.96,
+          reviewsCount: 224,
+          currentPrice: 310,
+          originalPrice: 310,
+          isBooked: true,
+          distanceMiles: 0.3,
+          superhost: true,
+          priceHistory: [
+            { date: '4d ago', price: 310 },
+            { date: 'Today', price: 310 },
+          ],
+        },
+        {
+          id: 'comp-dc-4',
+          name: '1022 Montello Ave NE 3-Bed',
+          address: '1022 Montello Ave NE',
+          airbnbUrl: 'https://www.airbnb.com/s/Washington--DC',
+          bedrooms: 3,
+          bathrooms: 2,
+          rating: 4.81,
+          reviewsCount: 44,
+          currentPrice: 210,
+          originalPrice: 250,
+          isBooked: false,
+          distanceMiles: 0.2,
+          superhost: false,
+          priceHistory: [
+            { date: '4d ago', price: 250 },
+            { date: 'Today', price: 210 },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'house-2',
+      nickname: '418 8th St NE (Capitol Hill)',
+      title: 'Victorian Garden Flat by Eastern Market & Capitol',
+      address: '418 8th St NE, Washington, DC 20002',
+      neighborhood: 'Capitol Hill / Eastern Market',
+      zipCode: '20002',
+      bedrooms: 2,
+      bathrooms: 2,
+      currentPrice: 265,
+      floorPrice: 180,
+      cleaningFee: 125,
+      cleaningCost: 110,
+      nightlyFixedCost: 115,
+      hostServiceFeePercent: 3,
+      unbookedDaysCount: 3,
+      unbookedStartDate: addDaysIso(baseDate, 4),
+      unbookedEndDate: addDaysIso(baseDate, 7),
+      isBooked: false,
+      propertyManagerName: 'Carlos R.',
+      managerPhone: '+1 (202) 555-0189',
+      activePromotion: null,
+      comps: [
+        {
+          id: 'comp-dc-2-1',
+          name: '412 8th St NE Garden 2BR',
+          address: '412 8th St NE (Same block)',
+          airbnbUrl: 'https://www.airbnb.com/s/Capitol-Hill--Washington--DC',
+          bedrooms: 2,
+          bathrooms: 2,
+          rating: 4.92,
+          reviewsCount: 139,
+          currentPrice: 215,
+          originalPrice: 255,
+          isBooked: false,
+          distanceMiles: 0.03,
+          superhost: true,
+          priceHistory: [
+            { date: '3d ago', price: 255 },
+            { date: 'Today', price: 215 },
+          ],
+        },
+        {
+          id: 'comp-dc-2-2',
+          name: '710 Constitution Ave NE Flat',
+          address: '710 Constitution Ave NE',
+          airbnbUrl: 'https://www.airbnb.com/s/Capitol-Hill--Washington--DC',
+          bedrooms: 2,
+          bathrooms: 1.5,
+          rating: 4.89,
+          reviewsCount: 92,
+          currentPrice: 230,
+          originalPrice: 245,
+          isBooked: false,
+          distanceMiles: 0.25,
+          superhost: false,
+          priceHistory: [
+            { date: '3d ago', price: 245 },
+            { date: 'Today', price: 230 },
+          ],
+        },
+        {
+          id: 'comp-dc-2-3',
+          name: '215 F St NE Carriage House',
+          address: '215 F St NE (Union Station)',
+          airbnbUrl: 'https://www.airbnb.com/s/Capitol-Hill--Washington--DC',
+          bedrooms: 2,
+          bathrooms: 2,
+          rating: 4.97,
+          reviewsCount: 180,
+          currentPrice: 280,
+          originalPrice: 280,
+          isBooked: true,
+          distanceMiles: 0.45,
+          superhost: true,
+          priceHistory: [
+            { date: '3d ago', price: 280 },
+            { date: 'Today', price: 280 },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'house-3',
+      nickname: '1742 Riggs Pl NW (Dupont)',
+      title: 'Sunlit Dupont Circle Loft w/ Private Patio',
+      address: '1742 Riggs Pl NW, Washington, DC 20009',
+      neighborhood: 'Dupont Circle / 17th St Corridor',
+      zipCode: '20009',
+      bedrooms: 2,
+      bathrooms: 2,
+      currentPrice: 240,
+      floorPrice: 185,
+      cleaningFee: 135,
+      cleaningCost: 115,
+      nightlyFixedCost: 125,
+      hostServiceFeePercent: 3,
+      unbookedDaysCount: 4,
+      unbookedStartDate: addDaysIso(baseDate, 3),
+      unbookedEndDate: addDaysIso(baseDate, 7),
+      isBooked: false,
+      propertyManagerName: 'Carlos R.',
+      managerPhone: '+1 (202) 555-0189',
+      activePromotion: null,
+      comps: [
+        {
+          id: 'comp-dc-3-1',
+          name: '1728 Riggs Pl NW Townhouse',
+          address: '1728 Riggs Pl NW',
+          airbnbUrl: 'https://www.airbnb.com/s/Dupont-Circle--Washington--DC',
+          bedrooms: 2,
+          bathrooms: 2,
+          rating: 4.91,
+          reviewsCount: 164,
+          currentPrice: 289,
+          originalPrice: 275,
+          isBooked: true,
+          distanceMiles: 0.04,
+          superhost: true,
+          priceHistory: [
+            { date: '3d ago', price: 275 },
+            { date: 'Today', price: 289 },
+          ],
+        },
+        {
+          id: 'comp-dc-3-2',
+          name: '1812 S St NW Boutique 2BR',
+          address: '1812 S St NW',
+          airbnbUrl: 'https://www.airbnb.com/s/Dupont-Circle--Washington--DC',
+          bedrooms: 2,
+          bathrooms: 2,
+          rating: 4.95,
+          reviewsCount: 210,
+          currentPrice: 325,
+          originalPrice: 310,
+          isBooked: true,
+          distanceMiles: 0.14,
+          superhost: true,
+          priceHistory: [
+            { date: '3d ago', price: 310 },
+            { date: 'Today', price: 325 },
+          ],
+        },
+        {
+          id: 'comp-dc-3-3',
+          name: '1620 Corcoran St NW Garden Suite',
+          address: '1620 Corcoran St NW',
+          airbnbUrl: 'https://www.airbnb.com/s/Dupont-Circle--Washington--DC',
+          bedrooms: 2,
+          bathrooms: 1.5,
+          rating: 4.86,
+          reviewsCount: 88,
+          currentPrice: 272,
+          originalPrice: 265,
+          isBooked: false,
+          distanceMiles: 0.19,
+          superhost: false,
+          priceHistory: [
+            { date: '3d ago', price: 265 },
+            { date: 'Today', price: 272 },
+          ],
+        },
+      ],
+    },
+  ];
+}
+
+export const INITIAL_HOUSES: PropertyHouse[] = createInitialHouses();
 
 export const INITIAL_RULES: PricingRule[] = [
   {
-    id: "rule-1",
-    title: "5-Day Orphan Gap Emergency Rule",
+    id: 'rule-1',
+    kind: 'orphan_gap',
+    title: 'Orphan Gap Emergency Watch',
     enabled: true,
-    description: "Trigger immediate action if 3-5 consecutive days are vacant within the next 7 days.",
-    parameterName: "Empty Window Limit",
+    description:
+      'Trigger immediate action when unbooked consecutive nights are at or within this empty window threshold.',
+    parameterName: 'Gap Trigger',
     parameterValue: 5,
-    unit: "days"
+    unit: 'nights',
   },
   {
-    id: "rule-2",
-    title: "Direct Neighbor Undercut Threshold",
+    id: 'rule-2',
+    kind: 'neighbor_undercut',
+    title: 'Neighbor Undercut Threshold',
     enabled: true,
-    description: "Alert host if adjacent Florida Ave neighbor price is >8% lower than your listing.",
-    parameterName: "Neighbor Undercut",
+    description:
+      'Alert when a vacant comparable neighbor is priced lower than your nightly rate by more than this percentage.',
+    parameterName: 'Undercut Trigger',
     parameterValue: 8,
-    unit: "%"
+    unit: '%',
   },
   {
-    id: "rule-3",
-    title: "Official Airbnb Promotion Badge",
+    id: 'rule-3',
+    kind: 'promo_badge',
+    title: 'Airbnb Strikethrough Promo Badge',
     enabled: true,
-    description: "Recommend 15% Last Minute or 20% Length of Stay badge to boost search algorithm ranking.",
-    parameterName: "Promo Discount",
+    description:
+      'Recommend official Last-Minute and Length-of-Stay badges using this base discount percentage.',
+    parameterName: 'Promo Discount',
     parameterValue: 15,
-    unit: "%"
+    unit: '%',
   },
   {
-    id: "rule-4",
-    title: "Host Safety Floor Rate",
+    id: 'rule-4',
+    kind: 'safety_floor',
+    title: 'Host Safety Floor Guardrail',
     enabled: true,
-    description: "Strict floor to prevent underpricing below operational cleaning/mortgage costs.",
-    parameterName: "Floor Price",
-    parameterValue: 195,
-    unit: "$/night"
-  }
+    description:
+      'Never recommend a base rate or promotion below the property floor price plus this extra margin buffer.',
+    parameterName: 'Floor Cushion',
+    parameterValue: 0,
+    unit: '$/nt',
+  },
 ];
+
+export const DEFAULT_AI_SETTINGS: AiSettings = {
+  mode: 'auto',
+  customApiKey: '',
+  soundEnabled: true,
+};

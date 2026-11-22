@@ -1,13 +1,13 @@
 import React from 'react';
+import { TrendingDown, TrendingUp, ShieldCheck, MapPin, Tag, Bell } from 'lucide-react';
 import { AgentDecision, PropertyHouse, AirbnbPromotion } from '../types';
-import { AlertCircle, CheckCircle, TrendingDown, ArrowDownRight, Zap, ShieldCheck, MapPin, Tag } from 'lucide-react';
 
 interface AgentAlertBannerProps {
   decision: AgentDecision;
   house: PropertyHouse;
   onApplyPriceChange: (newPrice: number) => void;
   onApplyPromotion: (promo: AirbnbPromotion) => void;
-  onSimulateReminder: () => void;
+  onDispatchReminder: () => void;
 }
 
 export const AgentAlertBanner: React.FC<AgentAlertBannerProps> = ({
@@ -15,190 +15,248 @@ export const AgentAlertBanner: React.FC<AgentAlertBannerProps> = ({
   house,
   onApplyPriceChange,
   onApplyPromotion,
-  onSimulateReminder
+  onDispatchReminder,
 }) => {
   const isAlert = decision.status === 'ALERT';
+  const isUpside = decision.status === 'UPSIDE';
   const topPromo = decision.recommendedPromotions[0];
-  const totalVacancyRisk = house.currentPrice * house.unbookedDaysCount;
+
+  const containerStyle = isAlert
+    ? 'border-amber-300 bg-gradient-to-br from-[#FFFDF9] via-[#FAF6ED] to-[#F5ECE0]'
+    : isUpside
+      ? 'border-blue-300 bg-gradient-to-br from-[#F8FAFF] via-white to-[#EFF4FF]'
+      : 'border-emerald-300 bg-gradient-to-br from-[#F4FAF6] via-white to-[#ECFDF5]';
+
+  const statusBadgeStyle = isAlert
+    ? 'border-amber-300 bg-moisha-butter text-moisha-amber'
+    : isUpside
+      ? 'border-blue-200 bg-moisha-sky text-moisha-royal'
+      : 'border-emerald-200 bg-moisha-mint text-moisha-green';
+
+  const formattedDelta =
+    decision.priceDelta > 0
+      ? `+$${decision.priceDelta}`
+      : decision.priceDelta < 0
+        ? `-$${Math.abs(decision.priceDelta)}`
+        : '$0';
 
   return (
-    <div className={`relative overflow-hidden rounded-3xl border transition-all ${
-      isAlert
-        ? 'bg-gradient-to-br from-[#FFFDF9] via-[#FAF6ED] to-[#F5ECE0] border-amber-300 shadow-md shadow-amber-900/5'
-        : 'bg-gradient-to-br from-[#F4FAF6] via-white to-[#EEF8F1] border-emerald-300'
-    }`}>
-      
-      {/* Decorative parchment accent */}
-      <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-amber-200/20 blur-3xl pointer-events-none" />
-
-      <div className="p-6 sm:p-8 relative z-10">
-        
-        {/* Header Tag */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-3.5">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xs text-xl ${
-              isAlert ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-            }`}>
-              {isAlert ? '⚖️' : '✨'}
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`text-xs font-mono font-bold tracking-wider uppercase px-3 py-0.5 rounded-full ${
-                  isAlert ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                }`}>
-                  {house.nickname} • MOISHA'S VERDICT
-                </span>
-                <span className="text-xs text-red-800 font-mono font-bold px-2.5 py-0.5 rounded-full bg-red-50 border border-red-200">
-                  {house.unbookedDaysCount} Unbooked Days ({house.unbookedStartDate.slice(5)} - {house.unbookedEndDate.slice(5)})
-                </span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-serif font-bold text-blue-950 mt-1">
-                Neighbor Undercutting: Let's Fill These Empty Days!
-              </h2>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 bg-white/80 px-3 py-1.5 rounded-xl border border-stone-200 shadow-xs">
-            <span className="text-xs text-slate-500 font-medium">Moisha Confidence:</span>
-            <span className="text-xs font-bold font-mono text-blue-900 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-              {decision.confidenceScore}%
+    <section
+      aria-label="Moisha pricing recommendation"
+      className={`rounded-3xl border p-6 shadow-sm transition-all sm:p-7 ${containerStyle}`}
+    >
+      {/* Top Row */}
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full border px-3 py-0.5 text-[11px] font-bold tracking-wide uppercase ${statusBadgeStyle}`}
+            >
+              {isAlert
+                ? 'Action Needed · Undercut Alert'
+                : isUpside
+                  ? 'Revenue Opportunity · Raise Rate'
+                  : 'Market Aligned · Hold Steady'}
+            </span>
+            <span className="rounded-full border border-moisha-border bg-white px-2.5 py-0.5 text-[11px] font-semibold text-moisha-muted">
+              {decision.primaryTriggerRule}
             </span>
           </div>
+          <h1 className="mt-2 text-xl font-extrabold tracking-tight text-moisha-navy sm:text-2xl">
+            {decision.headline}
+          </h1>
         </div>
 
-        {/* Address & Neighbor callout */}
-        <div className="bg-white/90 rounded-2xl p-3.5 border border-amber-200/80 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-xs">
-          <div className="flex items-center gap-2 text-slate-700 font-mono">
-            <MapPin className="w-4 h-4 text-amber-700 shrink-0" />
-            <span>Target House: <strong className="text-blue-950 font-bold">{house.address}</strong></span>
-          </div>
-          <div className="text-amber-900 font-mono font-bold bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
-            Perishable Revenue at Risk: ${totalVacancyRisk}
-          </div>
+        <div className="flex items-center gap-2 rounded-xl border border-moisha-border bg-white/90 px-3 py-1.5 text-xs">
+          <span className="text-moisha-muted">Confidence</span>
+          <span className="rounded-md bg-moisha-sky px-2 py-0.5 font-bold text-moisha-royal">
+            {decision.confidenceScore}%
+          </span>
         </div>
-
-        {/* Pricing Comparison Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-xs">
-            <span className="text-[11px] text-slate-500 uppercase font-mono font-bold">Your Current Rate</span>
-            <div className="text-2xl font-bold text-slate-800 mt-1 font-mono">
-              ${house.currentPrice}
-              <span className="text-xs text-slate-400 font-normal">/night</span>
-            </div>
-            <div className="text-xs text-rose-600 mt-1 font-semibold">Sitting vacant for next 5 days</div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 border border-amber-300 shadow-xs">
-            <span className="text-[11px] text-amber-900 uppercase font-mono font-bold">Cheapest Neighbor</span>
-            <div className="text-2xl font-bold text-amber-800 mt-1 font-mono">
-              ${decision.competitorSummary.cheapestNeighborPrice}
-              <span className="text-xs text-slate-400 font-normal">/night</span>
-            </div>
-            <div className="text-xs text-amber-700 mt-1 font-mono font-medium">
-              ${house.currentPrice - decision.competitorSummary.cheapestNeighborPrice} cheaper than you
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 border border-blue-400 shadow-xs ring-1 ring-blue-200">
-            <span className="text-[11px] text-blue-900 uppercase font-mono font-bold">Moisha Recommended</span>
-            <div className="text-2xl font-bold text-blue-700 mt-1 font-mono flex items-baseline gap-2">
-              ${decision.recommendedPrice}
-              <span className="text-xs text-slate-400 font-normal">/night</span>
-              {decision.priceDelta !== 0 && (
-                <span className="text-xs px-2 py-0.5 rounded-md font-mono font-bold bg-blue-100 text-blue-900">
-                  -${Math.abs(decision.priceDelta)}
-                </span>
-              )}
-            </div>
-            <div className="text-xs text-slate-500 mt-1 font-mono">Safety Floor: ${house.floorPrice}/nt</div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-xs">
-            <span className="text-[11px] text-slate-500 uppercase font-mono font-bold">Booking Probability</span>
-            <div className="flex items-center gap-3 mt-1">
-              <div>
-                <span className="text-[10px] text-slate-400 block font-mono">At Current</span>
-                <span className="text-lg font-bold text-rose-600 font-mono">{decision.projectedBookingProbability.atCurrentPrice}%</span>
-              </div>
-              <ArrowDownRight className="w-4 h-4 text-slate-400" />
-              <div>
-                <span className="text-[10px] text-slate-400 block font-mono">With Fix</span>
-                <span className="text-lg font-bold text-emerald-700 font-mono">{decision.projectedBookingProbability.atRecommendedPrice}%</span>
-              </div>
-            </div>
-            <div className="text-[11px] text-emerald-800 mt-1 font-mono font-semibold">
-              +{decision.projectedBookingProbability.atRecommendedPrice - decision.projectedBookingProbability.atCurrentPrice}% conversion jump
-            </div>
-          </div>
-        </div>
-
-        {/* Moisha Advisor Reasoning & Neighbor Breakdown */}
-        <div className="bg-white/95 rounded-2xl p-5 sm:p-6 border border-amber-200 mb-6 space-y-3.5 shadow-xs">
-          <div className="flex items-center gap-2 text-sm font-bold text-blue-950 font-serif">
-            <span className="text-amber-600 text-lg">💡</span>
-            <span>Uncle Moisha's Commercial Counsel for Carlos</span>
-          </div>
-
-          <p className="text-slate-800 text-sm leading-relaxed font-medium bg-[#FFFDF9] p-4 rounded-xl border border-amber-100">
-            "{decision.reasoning}"
-          </p>
-
-          <div className="p-3.5 bg-blue-50/70 rounded-xl border border-blue-200/80 text-xs text-slate-700">
-            <strong className="text-blue-950 font-mono">Neighbor Intel: </strong>
-            {decision.neighborGapAnalysis}
-          </div>
-
-          <div className="border-t border-stone-200 pt-3">
-            <span className="text-xs font-mono uppercase text-slate-500 block mb-2 font-bold">Moisha's 3-Step Action Plan:</span>
-            <ul className="space-y-1.5">
-              {decision.recommendedActions.map((action, idx) => (
-                <li key={idx} className="flex items-start gap-2.5 text-xs text-slate-700 font-medium">
-                  <div className="w-2 h-2 rounded-full bg-blue-600 mt-1 shrink-0" />
-                  <span>{action}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Action Controls for PM */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-amber-200/70">
-          <div className="flex items-center gap-2 text-xs text-slate-600">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Never drop below your floor limit (${house.floorPrice}/nt). Moisha protects your profit.</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={onSimulateReminder}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white hover:bg-stone-50 text-slate-700 border border-stone-300 transition-colors shadow-xs flex items-center gap-2"
-            >
-              <span>Send WhatsApp / Telegram Reminder</span>
-            </button>
-
-            {topPromo && (
-              <button
-                onClick={() => onApplyPromotion(topPromo)}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-sm transition-all flex items-center gap-2 active:scale-95"
-              >
-                <Tag className="w-4 h-4" />
-                <span>Run {topPromo.badge} (${topPromo.effectivePrice}/nt)</span>
-              </button>
-            )}
-
-            {isAlert && house.currentPrice !== decision.recommendedPrice && (
-              <button
-                onClick={() => onApplyPriceChange(decision.recommendedPrice)}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-700 hover:bg-blue-800 text-white shadow-md shadow-blue-900/15 transition-all flex items-center gap-2 active:scale-95"
-              >
-                <TrendingDown className="w-4 h-4" />
-                <span>Drop Rate to ${decision.recommendedPrice}/night</span>
-              </button>
-            )}
-          </div>
-        </div>
-
       </div>
-    </div>
+
+      {/* Property & At-Risk Strip */}
+      <div className="mb-5 flex flex-col justify-between gap-2 rounded-2xl border border-moisha-border bg-white/90 px-4 py-3 text-xs sm:flex-row sm:items-center">
+        <div className="flex items-center gap-2 text-moisha-navy">
+          <MapPin className="h-4 w-4 shrink-0 text-moisha-amber" />
+          <span>
+            <strong>{house.address}</strong> · {house.bedrooms} BR / {house.bathrooms} BA
+          </span>
+        </div>
+        {!house.isBooked && house.unbookedDaysCount > 0 ? (
+          <span className="font-bold text-moisha-amber">
+            {house.unbookedDaysCount} Empty Nights ({house.unbookedStartDate.slice(5)}–{house.unbookedEndDate.slice(5)}) · ${decision.revenueProjection.atRiskGross} Gross Window
+          </span>
+        ) : (
+          <span className="font-bold text-moisha-green">Window Fully Booked</span>
+        )}
+      </div>
+
+      {/* 4 KPI Cards */}
+      <div className="mb-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-moisha-border bg-white p-4">
+          <span className="text-[11px] font-bold tracking-wide text-moisha-muted uppercase">
+            Your Current Rate
+          </span>
+          <div className="mt-1 text-2xl font-extrabold text-moisha-navy">
+            ${house.currentPrice}
+            <span className="text-xs font-normal text-moisha-muted">/night</span>
+          </div>
+          <div className="mt-1 text-xs font-medium text-moisha-muted">
+            {house.isBooked || house.unbookedDaysCount === 0
+              ? 'Calendar booked'
+              : `${house.unbookedDaysCount} unbooked nights ahead`}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-moisha-border bg-white p-4">
+          <span className="text-[11px] font-bold tracking-wide text-moisha-muted uppercase">
+            {isUpside ? 'Neighborhood Median' : 'Cheapest Vacant Comp'}
+          </span>
+          <div className="mt-1 text-2xl font-extrabold text-moisha-navy">
+            $
+            {isUpside
+              ? decision.competitorSummary.medianCompPrice
+              : decision.competitorSummary.cheapestNeighborPrice}
+            <span className="text-xs font-normal text-moisha-muted">/night</span>
+          </div>
+          <div className="mt-1 truncate text-xs font-medium text-moisha-muted">
+            {isUpside
+              ? `Range $${decision.competitorSummary.lowerRangePrice}–$${decision.competitorSummary.upperRangePrice}/nt`
+              : decision.competitorSummary.cheapestNeighborName}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border-2 border-moisha-royal bg-white p-4">
+          <span className="text-[11px] font-bold tracking-wide text-moisha-royal uppercase">
+            Moisha Recommended
+          </span>
+          <div className="mt-1 flex items-baseline gap-2 text-2xl font-extrabold text-moisha-royal">
+            <span>${decision.recommendedPrice}</span>
+            <span className="text-xs font-normal text-moisha-muted">/night</span>
+            {decision.priceDelta !== 0 && (
+              <span
+                className={`rounded-md px-2 py-0.5 text-xs font-bold ${
+                  decision.priceDelta > 0
+                    ? 'bg-moisha-mint text-moisha-green'
+                    : 'bg-moisha-sky text-moisha-royal'
+                }`}
+              >
+                {formattedDelta}
+              </span>
+            )}
+          </div>
+          <div className="mt-1 text-xs font-medium text-moisha-muted">
+            Safety Floor: ${decision.effectiveFloorPrice}/nt
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-moisha-border bg-white p-4">
+          <span className="text-[11px] font-bold tracking-wide text-moisha-muted uppercase">
+            Booking Odds & Net Lift
+          </span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-lg font-bold text-moisha-muted">
+              {decision.projectedBookingProbability.atCurrentPrice}%
+            </span>
+            <span className="text-xs text-moisha-muted">→</span>
+            <span className="text-2xl font-extrabold text-moisha-green">
+              {decision.projectedBookingProbability.atRecommendedPrice}%
+            </span>
+          </div>
+          <div className="mt-1 text-xs font-semibold text-moisha-green">
+            {decision.revenueProjection.expectedValueGain >= 0
+              ? `+$${decision.revenueProjection.expectedValueGain} expected net gain`
+              : `$${decision.revenueProjection.recommendedScenario.netProfitIfBooked} net if booked`}
+          </div>
+        </div>
+      </div>
+
+      {/* Uncle Moisha Counsel */}
+      <div className="mb-5 space-y-3 rounded-2xl border border-moisha-border bg-white p-5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-bold text-moisha-navy">
+            🕎 Uncle Moisha&apos;s Counsel for {house.propertyManagerName}
+          </span>
+          <span className="text-[11px] font-medium text-moisha-muted">
+            {decision.source === 'gemini' ? 'Enhanced by Gemini' : 'Instant Local Advisory'}
+          </span>
+        </div>
+
+        <p className="rounded-xl border border-moisha-border/80 bg-moisha-sand p-3.5 text-sm leading-relaxed text-moisha-navy">
+          &ldquo;{decision.reasoning}&rdquo;
+        </p>
+
+        <div className="rounded-xl bg-moisha-sky/70 px-3.5 py-2.5 text-xs text-moisha-navy">
+          <strong>Neighbor Intel: </strong>
+          {decision.neighborGapAnalysis}
+        </div>
+
+        <ul className="grid grid-cols-1 gap-2 pt-1 md:grid-cols-3">
+          {decision.recommendedActions.map((action, idx) => (
+            <li
+              key={idx}
+              className="flex items-start gap-2 rounded-xl border border-moisha-border/70 bg-moisha-sand/50 p-2.5 text-xs text-moisha-navy"
+            >
+              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-moisha-navy text-[10px] font-bold text-white">
+                {idx + 1}
+              </span>
+              <span>{action}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Bottom Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-moisha-border/80 pt-4">
+        <div className="flex items-center gap-2 text-xs text-moisha-muted">
+          <ShieldCheck className="h-4 w-4 shrink-0 text-moisha-green" />
+          <span>
+            Floor guardrail locked at <strong>${decision.effectiveFloorPrice}/nt</strong> — Moisha never recommends pricing at a loss.
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={onDispatchReminder}
+            className="btn-quiet py-2 text-xs"
+          >
+            <Bell className="h-3.5 w-3.5 text-moisha-amber" />
+            <span>Notify {house.propertyManagerName}</span>
+          </button>
+
+          {topPromo && house.activePromotion?.id !== topPromo.id && (
+            <button
+              type="button"
+              onClick={() => onApplyPromotion(topPromo)}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white transition-all hover:bg-amber-700 active:scale-[0.98]"
+            >
+              <Tag className="h-3.5 w-3.5" />
+              <span>
+                Run {topPromo.badge} (${topPromo.effectivePrice}/nt)
+              </span>
+            </button>
+          )}
+
+          {house.currentPrice !== decision.recommendedPrice && (
+            <button
+              type="button"
+              onClick={() => onApplyPriceChange(decision.recommendedPrice)}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-moisha-royal px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-blue-700 active:scale-[0.98]"
+            >
+              {decision.direction === 'raise' ? (
+                <TrendingUp className="h-4 w-4" />
+              ) : (
+                <TrendingDown className="h-4 w-4" />
+              )}
+              <span>
+                {decision.direction === 'raise' ? 'Raise' : 'Drop'} Rate to ${decision.recommendedPrice}/nt
+              </span>
+            </button>
+          )}
+        </div>
+      </div>
+    </section>
   );
 };

@@ -4,156 +4,71 @@
   <img src="screenshots/moisha-dashboard.png" alt="Moisha neighborhood pricing advisor" width="100%" />
 </p>
 
-Moisha helps short-term rental hosts decide what to charge for their properties.
+Moisha helps short-term rental hosts decide what to charge tonight based on real neighborhood comps, calendar gaps, and strict floor-price guardrails.
 
-It compares nearby rental prices, tracks market changes, calculates potential revenue, and suggests when to adjust nightly rates.
+It combines an instant, deterministic pricing & net-profit engine with optional Google Gemini AI advisory, interactive Q&A copilot chat, and live Google Search submarket grounding.
 
-## What It Does
+## Core Capabilities
 
-| Feature | Description |
+| Capability | What It Does |
 |---|---|
-| Market Research | Check rental prices in your neighborhood. |
-| Competitor Analysis | Compare your rates with similar properties nearby. |
-| Pricing Advice | Get recommendations for nightly rates. |
-| Revenue Calculator | Calculate income, expenses, and potential profit. |
-| Vacancy Analysis | Identify empty dates and potential lost revenue. |
-| Price Alerts | Get notified when market conditions may require attention. |
+| **Multi-Property Portfolio** | Switch between properties (undercut alerts, orphan calendar gaps, and underpriced upside scenarios), or add/edit your own rentals with `localStorage` persistence. |
+| **Neighborhood Benchmark** | Compare your current rate against local 25th/50th/75th percentile ranges and individual vacant vs. booked neighbor comps. |
+| **Reactive Pricing & Rules Engine** | Enforces your host safety floor, neighbor undercut threshold, orphan-night watch, and Airbnb strikethrough promotion badges in real time. |
+| **Revenue & Net Profit Calculator** | Models gross room revenue, guest cleaning fees, cleaner turnover costs, platform fees, fixed holding costs, and odds-weighted expected net profit. |
+| **Uncle Moisha Copilot & Search Grounding** | Interactive Q&A advisor with 1-click rate/promo actions plus optional Gemini 2.5 Flash + Google Search market grounding. |
+| **Alerts & PWA Notifications** | Dispatch reminders across Telegram, WhatsApp, SMS previews, or trigger live browser push notifications via the built-in Service Worker. |
 
-## How It Works
+## Quick Start
 
-1. Select your rental property.
-2. Review your current nightly rate and available dates.
-3. Check prices of comparable properties nearby.
-4. Review Moisha's pricing recommendation.
-5. Calculate the financial impact before changing your rate.
-
-## Technology
-
-React · TypeScript · Vite · Node.js · Express · Google Gemini
-
-## Run Locally
-
-**Requirements:** Node.js, npm, and Google Cloud credentials with Vertex AI access.
+**Requirements:** Node.js 20+ and npm.
 
 ```bash
-gcloud init
-gcloud auth application-default login
 npm install
 npm run dev
 ```
 
-Configure the required environment variables in `backend/.env.local`.
+Open the local URL printed by Vite (typically `http://localhost:5173`).
 
-## Note
+### Optional: Enable Live Gemini AI & Search Grounding
 
-Market information and pricing recommendations depend on available data. Estimates are not guaranteed booking or revenue forecasts.
+Moisha works **100% offline out of the box** using its deterministic pricing and profit engine.
 
+To enable live Gemini AI commentary, conversational responses, and Google Search submarket grounding during local development, add `GEMINI_API_KEY` to `.env` in the repository root:
 
+```env
+GEMINI_API_KEY=your_gemini_api_key
+```
 
-## How It Works
+Vite's local dev server proxies `/api/gemini/*` requests server-side so your `.env` key is never bundled into client assets. On static deployments (such as GitHub Pages), you can optionally enter a personal key in the in-app **Settings** modal.
 
-| Step | Host | Moisha |
-|---|---|---|
-| 1. Select Property | Select a rental property. | Loads its address, property details, current rate, and minimum price. |
-| 2. Review Calendar | Check upcoming available dates. | Identifies empty nights and calculates potential revenue at risk. |
-| 3. Check Local Market | Review the property's location. | Searches for rental prices and market information in the surrounding area. |
-| 4. Compare Prices | Review similar nearby properties. | Compares available rates and highlights pricing differences. |
-| 5. Review Suggestions | Check the pricing analysis. | Recommends rate adjustments and possible promotions. |
-| 6. Adjust Pricing | Decide whether to change the nightly rate. | Calculates the difference and checks the minimum price limit. |
+## Project Scripts
 
-## Technology
-
-- React
-- TypeScript
-- Vite
-- Node.js
-- Express
-- Google Gemini 2.5 Flash
-- Google Cloud Vertex AI
-- Google Search Grounding
+```bash
+npm run dev             # Start Vite dev server (+ optional .env Gemini bridge)
+npm run typecheck       # Run strict TypeScript compiler checks
+npm test                # Run Vitest unit, property-based (fast-check), and UI tests
+npm run build           # Build static PWA bundle into frontend/dist
+npm run build-baseline  # Compute p25/median/p75 baselines from demo or CSV data
+```
 
 ## Project Structure
 
 ```text
 Moisha/
-├── backend/
-│   ├── server.js
-│   └── package.json
+├── .github/workflows/pages.yml    # CI typecheck, test, build & GitHub Pages deploy
 ├── frontend/
-│   ├── components/
-│   ├── services/
-│   ├── App.tsx
-│   ├── constants.ts
-│   ├── types.ts
-│   └── package.json
-├── Dockerfile
-├── package.json
+│   ├── __tests__/                 # Vitest + fast-check + Testing Library suites
+│   ├── components/                # Portfolio, Verdict, Benchmark, Chat, Profit, Rules
+│   ├── public/                    # Logo, PWA manifest, notification Service Worker
+│   ├── scripts/build-baseline.ts  # CSV / portfolio quantile baseline CLI
+│   ├── services/                  # Pricing engine, Gemini bridge, storage, audio/push
+│   ├── App.tsx                    # Main 4-tab pocket advisor workspace
+│   ├── constants.ts               # Sample portfolio & default pricing rules
+│   └── types.ts                   # Zod schemas & TypeScript domain contracts
 └── README.md
 ```
 
-## Requirements
+## Note
 
-Before running the project, install:
-
-- Node.js and npm
-- Google Cloud SDK
-- A Google Cloud project with Vertex AI enabled
-
-[Google Cloud SDK Installation](https://cloud.google.com/sdk/docs/install)
-
-## Google Cloud Setup
-
-Initialize the CLI:
-
-```bash
-gcloud init
-```
-
-Authenticate:
-
-```bash
-gcloud auth application-default login
-```
-
-Make sure your account has permission to access Vertex AI.
-
-## Environment Variables
-
-Configure the backend using `backend/.env.local`.
-
-| Variable | Description |
-|---|---|
-| `API_BACKEND_PORT` | Port used by the backend server |
-| `API_PAYLOAD_MAX_SIZE` | Maximum API request size |
-| `GOOGLE_CLOUD_LOCATION` | Google Cloud region |
-| `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID |
-
-Keep credentials and secret keys out of the repository.
-
-## Run Locally
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Start the application:
-
-```bash
-npm run dev
-```
-
-## Market Data
-
-Moisha uses Google Search Grounding to retrieve publicly available rental market information. Competitor comparisons also use property records maintained by the application.
-
-Market estimates may differ from actual Airbnb booking prices and availability. Recommendations should be reviewed before changing listing prices.
-
-## Why Moisha?
-
-I built Moisha to make rental pricing easier to understand.
-
-When a property sits empty, the question is whether the price is too high, demand is low, or nearby properties offer something more competitive.
-
-Moisha brings those numbers together so hosts can make pricing decisions based on what is happening around their property, rather than relying on guesswork.
+Market estimates, booking probabilities, and pricing recommendations depend on available comparable data and are not guaranteed booking or revenue forecasts. Always review recommendations before updating live listing rates.

@@ -1,138 +1,149 @@
 import React from 'react';
+import { Sparkles, Check, Bell, Shield, X } from 'lucide-react';
 import { PropertyHouse, AirbnbPromotion } from '../types';
-import { Tag, Sparkles, Check, Bell, Shield } from 'lucide-react';
 
 interface PromotionPlannerProps {
   house: PropertyHouse;
   promotions: AirbnbPromotion[];
-  onApplyPromotion: (promo: AirbnbPromotion) => void;
+  effectiveFloorPrice: number;
+  onApplyPromotion: (promo: AirbnbPromotion | null) => void;
   onSendReminderToPM: (promo: AirbnbPromotion) => void;
 }
 
 export const PromotionPlanner: React.FC<PromotionPlannerProps> = ({
   house,
   promotions,
+  effectiveFloorPrice,
   onApplyPromotion,
   onSendReminderToPM,
 }) => {
+  const nights = Math.max(1, house.unbookedDaysCount);
+
   return (
-    <div className="bg-white border border-[#E8DFD3] rounded-3xl p-6 shadow-sm">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+    <section aria-label="Airbnb promotion badges" className="card p-6">
+      <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 border border-amber-300 flex items-center justify-center text-lg shadow-xs">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-amber-300 bg-moisha-butter text-lg">
             🏷️
           </div>
           <div>
-            <h3 className="text-base font-serif font-bold text-blue-950">
-              Moisha's Airbnb Promotion & Strikethrough Badges
+            <h3 className="text-base font-bold text-moisha-navy">
+              Airbnb Promotion & Strikethrough Badges
             </h3>
-            <p className="text-xs text-slate-500">
-              Targeted promotions for {house.nickname} to fill the {house.unbookedDaysCount}-day gap before neighbors book out
+            <p className="text-xs text-moisha-muted">
+              Boost search visibility for {house.nickname} without permanently lowering your base rate.
             </p>
           </div>
         </div>
 
-        <div className="text-xs font-mono text-slate-600 flex items-center gap-2">
-          <span className="text-slate-400">Target Gap:</span>
-          <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 font-bold border border-amber-200">
-            {house.unbookedStartDate} → {house.unbookedEndDate} ({house.unbookedDaysCount} days)
-          </span>
+        <span className="self-start rounded-lg border border-amber-200 bg-moisha-butter px-2.5 py-1 text-xs font-bold text-moisha-amber sm:self-auto">
+          {house.isBooked || house.unbookedDaysCount === 0
+            ? 'No Unbooked Gap'
+            : `${house.unbookedStartDate.slice(5)} → ${house.unbookedEndDate.slice(5)} (${house.unbookedDaysCount} nights)`}
+        </span>
+      </div>
+
+      {promotions.length === 0 ? (
+        <div className="rounded-2xl border border-moisha-border bg-moisha-sand p-6 text-center text-xs text-moisha-muted">
+          No discount promotions needed right now — {house.nickname} is either booked, priced for upside, or promotions are disabled in Rules.
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {promotions.map((promo) => {
+            const isApplied = house.activePromotion?.id === promo.id;
+            const savingsPerNight = Math.max(0, house.currentPrice - promo.effectivePrice);
+            const totalWindowRevenue = promo.effectivePrice * nights;
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {promotions.map((promo) => {
-          const isApplied = house.activePromotion?.id === promo.id;
-          const savingsPerNight = house.currentPrice - promo.effectivePrice;
-          const totalWindowRevenue = promo.effectivePrice * house.unbookedDaysCount;
-
-          return (
-            <div
-              key={promo.id}
-              className={`rounded-2xl p-5 border transition-all ${
-                isApplied
-                  ? 'bg-emerald-50/80 border-emerald-400 ring-2 ring-emerald-500/20'
-                  : 'bg-[#FAF8F5] border-stone-200 hover:border-amber-300 hover:bg-white'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div>
-                  <span className="text-[10px] font-mono uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 inline-block mb-1.5 shadow-2xs">
-                    {promo.badge}
-                  </span>
-                  <h4 className="font-serif font-bold text-base text-blue-950">{promo.name}</h4>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-lg font-extrabold text-blue-700 font-mono">
-                    ${promo.effectivePrice}
-                    <span className="text-[11px] text-slate-400 font-normal">/nt</span>
+            return (
+              <div
+                key={promo.id}
+                className={`rounded-2xl border p-5 transition-all ${
+                  isApplied
+                    ? 'border-moisha-green bg-moisha-mint/60 ring-2 ring-moisha-green/20'
+                    : 'border-moisha-border bg-moisha-sand/70 hover:bg-white'
+                }`}
+              >
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <div>
+                    <span className="mb-1.5 inline-block rounded-full border border-amber-300 bg-moisha-butter px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-moisha-amber uppercase">
+                      {promo.badge}
+                    </span>
+                    <h4 className="text-base font-bold text-moisha-navy">{promo.name}</h4>
                   </div>
-                  <span className="text-[10px] line-through text-slate-400 font-mono">
-                    ${house.currentPrice}/nt
-                  </span>
+
+                  <div className="text-right">
+                    <div className="text-lg font-extrabold text-moisha-royal">
+                      ${promo.effectivePrice}
+                      <span className="text-[11px] font-normal text-moisha-muted">/nt</span>
+                    </div>
+                    <span className="text-[11px] text-moisha-muted line-through">
+                      ${house.currentPrice}/nt
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              <p className="text-xs text-slate-700 leading-relaxed mb-3.5 font-medium">
-                {promo.reason}
-              </p>
+                <p className="mb-3.5 text-xs leading-relaxed text-moisha-navy">{promo.reason}</p>
 
-              <div className="grid grid-cols-2 gap-2 bg-white rounded-xl p-3 border border-stone-200 mb-3.5 text-xs font-mono shadow-2xs">
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Discount</span>
-                  <span className="font-bold text-rose-600">-{promo.discountPercent}% (-${savingsPerNight}/nt)</span>
+                <div className="mb-3.5 grid grid-cols-2 gap-2 rounded-xl border border-moisha-border bg-white p-3 text-xs">
+                  <div>
+                    <span className="block text-[10px] font-bold text-moisha-muted uppercase">
+                      Guest Discount
+                    </span>
+                    <span className="font-bold text-moisha-red">
+                      -{promo.discountPercent}% (-${savingsPerNight}/nt)
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-moisha-muted uppercase">
+                      {nights}-Night Gross Room
+                    </span>
+                    <span className="font-bold text-moisha-green">${totalWindowRevenue}</span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">5-Day Gross Payout</span>
-                  <span className="font-bold text-emerald-700">${totalWindowRevenue} in pocket</span>
-                </div>
-              </div>
 
-              <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-stone-200">
-                <button
-                  onClick={() => onSendReminderToPM(promo)}
-                  className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 bg-white hover:bg-stone-100 rounded-xl font-semibold border border-stone-200 transition-colors flex items-center gap-1.5"
-                >
-                  <Bell className="w-3.5 h-3.5 text-amber-700" />
-                  <span>Alert Carlos</span>
-                </button>
+                <div className="flex items-center justify-between gap-2 border-t border-moisha-border pt-2.5">
+                  <button
+                    type="button"
+                    onClick={() => onSendReminderToPM(promo)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-moisha-border bg-white px-3 py-1.5 text-xs font-semibold text-moisha-navy hover:bg-moisha-sand"
+                  >
+                    <Bell className="h-3.5 w-3.5 text-moisha-amber" />
+                    <span>Alert {house.propertyManagerName}</span>
+                  </button>
 
-                <button
-                  onClick={() => onApplyPromotion(promo)}
-                  className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 ${
-                    isApplied
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'bg-blue-700 hover:bg-blue-800 text-white shadow-xs active:scale-95'
-                  }`}
-                >
                   {isApplied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Live on Airbnb</span>
-                    </>
+                    <button
+                      type="button"
+                      onClick={() => onApplyPromotion(null)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-moisha-green px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-800"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Active · Remove</span>
+                      <X className="h-3 w-3 opacity-80" />
+                    </button>
                   ) : (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                      <span>Activate Promotion</span>
-                    </>
+                    <button
+                      type="button"
+                      onClick={() => onApplyPromotion({ ...promo, status: 'applied' })}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-moisha-royal px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-amber-200" />
+                      <span>Activate Badge</span>
+                    </button>
                   )}
-                </button>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
-      <div className="mt-4 pt-3.5 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-        <span className="flex items-center gap-1.5 font-medium">
-          <Shield className="w-3.5 h-3.5 text-emerald-600" />
-          Safety floor of ${house.floorPrice}/night strictly respected. No loss-making bookings.
-        </span>
-        <span className="font-mono text-slate-400 text-[11px]">
-          Syncs via Airbnb Host Promotion API
+      <div className="mt-4 flex items-center gap-1.5 border-t border-moisha-border pt-3.5 text-xs text-moisha-muted">
+        <Shield className="h-3.5 w-3.5 shrink-0 text-moisha-green" />
+        <span>
+          Safety floor of <strong>${effectiveFloorPrice}/night</strong> strictly enforced on all promotional rates.
         </span>
       </div>
-    </div>
+    </section>
   );
 };
