@@ -4,44 +4,48 @@
 
 @layer base {
   html {
-    font-size: 16.5px;
+    font-size: 16px;
     -webkit-text-size-adjust: 100%;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
-  @media (min-width: 640px) {
-    html {
-      font-size: 17.5px;
-    }
-  }
+
   body {
-    @apply bg-moisha-sand font-sans text-base leading-relaxed text-moisha-navy antialiased;
+    @apply bg-[#F8FAFC] font-sans text-slate-900 antialiased selection:bg-slate-900 selection:text-white;
     min-height: 100dvh;
   }
+
   :focus-visible {
-    outline: 2px solid #2563eb;
+    outline: 2px solid #0f172a;
     outline-offset: 2px;
   }
 }
 
 @layer components {
-  .card {
-    @apply rounded-2xl border border-moisha-border bg-white p-5 sm:p-6;
+  .surface {
+    @apply rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)];
   }
+
   .btn {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold sm:text-base;
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
+
   .btn-primary {
-    @apply btn bg-moisha-navy text-white hover:bg-blue-950;
+    @apply btn bg-slate-900 text-white hover:bg-slate-800;
   }
-  .btn-quiet {
-    @apply btn border border-moisha-border bg-white text-moisha-navy hover:bg-moisha-sand;
+
+  .btn-secondary {
+    @apply btn border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900;
   }
-  .field {
-    @apply min-h-12 w-full rounded-xl border border-moisha-border bg-white px-3.5 text-base font-medium text-moisha-navy;
+
+  .input-field {
+    @apply h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-slate-900 focus:outline-none;
   }
-  .label {
-    @apply mb-1.5 block text-sm font-bold text-moisha-navy;
+
+  .field-label {
+    @apply mb-1.5 block text-sm font-medium text-slate-700;
   }
-  .hint {
-    @apply text-sm leading-6 text-moisha-muted;
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }

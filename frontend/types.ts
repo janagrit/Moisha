@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export function sanitizeExternalUrl(
-  raw: string | undefined,
+  raw: string | undefined | null,
   fallback = 'https://www.airbnb.com',
 ): string {
   if (!raw) return fallback;
@@ -16,224 +16,186 @@ export function sanitizeExternalUrl(
   }
 }
 
+export const OptionalHttpUrlSchema = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((val) => {
+    if (!val || !val.trim()) return null;
+    try {
+      const parsed = new URL(val.trim());
+      return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+        ? parsed.toString()
+        : null;
+    } catch {
+      return null;
+    }
+  });
+
 export const HttpUrlSchema = z
   .string()
   .refine((val) => {
     try {
-      const parsed = new URL(val);
+      const parsed = new URL(val.trim());
       return parsed.protocol === 'https:' || parsed.protocol === 'http:';
     } catch {
       return false;
     }
-  }, 'Must be a valid http(s) URL');
+  }, 'Please enter a valid http(s) URL');
 
-export const PricePointSchema = z.object({
-  date: z.string(),
-  price: z.number().nonnegative(),
+export const PropertyTypeSchema = z.enum([
+  'entire_home',
+  'private_room',
+  'shared_room',
+  'studio',
+]);
+
+export type PropertyType = z.infer<typeof PropertyTypeSchema>;
+
+export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
+  entire_home: 'Entire home',
+  private_room: 'Private room',
+  shared_room: 'Shared room',
+  studio: 'Studio',
+};
+
+export const AMENITY_OPTIONS = [
+  'wifi',
+  'kitchen',
+  'free_parking',
+  'washer_dryer',
+  'workspace',
+  'pool',
+  'hot_tub',
+  'patio',
+  'pet_friendly',
+  'ev_charger',
+] as const;
+
+export const AmenitySchema = z.enum(AMENITY_OPTIONS);
+export type Amenity = z.infer<typeof AmenitySchema>;
+
+export const AMENITY_LABELS: Record<Amenity, string> = {
+  wifi: 'Wi-Fi',
+  kitchen: 'Kitchen',
+  free_parking: 'Free parking',
+  washer_dryer: 'Washer/dryer',
+  workspace: 'Workspace',
+  pool: 'Pool',
+  hot_tub: 'Hot tub',
+  patio: 'Patio/balcony',
+  pet_friendly: 'Pet friendly',
+  ev_charger: 'EV charger',
+};
+
+export const HostPropertySchema = z.object({
+  id: z.string(),
+  airbnbUrl: HttpUrlSchema,
+  airbnbRoomId: z.string().nullable(),
+  name: z.string().min(1),
+  address: z.string().min(1),
+  city: z.string(),
+  state: z.string(),
+  zipCode: z.string(),
+  neighborhood: z.string(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
+  propertyType: PropertyTypeSchema,
+  bedrooms: z.number().int().min(0).max(20),
+  bathrooms: z.number().min(0).max(20).nullable(),
+  guestCapacity: z.number().int().min(1).max(50).nullable(),
+  nightlyPrice: z.number().positive().nullable(),
+  photoUrl: OptionalHttpUrlSchema,
+  amenities: z.array(AmenitySchema),
+  createdAt: z.string(),
 });
 
-export const ListingCompSchema = z.object({
+export type HostProperty = z.infer<typeof HostPropertySchema>;
+
+export const PriceSnapshotSchema = z.object({
+  price: z.number().positive(),
+  recordedAt: z.string(),
+});
+
+export type PriceSnapshot = z.infer<typeof PriceSnapshotSchema>;
+
+export const CompetitorListingSchema = z.object({
   id: z.string(),
+  airbnbUrl: HttpUrlSchema,
+  airbnbRoomId: z.string().nullable(),
   name: z.string().min(1),
-  address: z.string().optional(),
+  propertyType: PropertyTypeSchema,
+  bedrooms: z.number().int().min(0).max(20),
+  bathrooms: z.number().min(0).max(20).nullable(),
+  guestCapacity: z.number().int().min(1).max(50).nullable(),
+  nightlyPrice: z.number().positive(),
+  previousPrice: z.number().positive().nullable(),
+  photoUrl: OptionalHttpUrlSchema,
+  locationNote: z.string().nullable(),
+  amenities: z.array(AmenitySchema),
+  lastCheckedAt: z.string(),
+  priceHistory: z.array(PriceSnapshotSchema),
+});
+
+export type CompetitorListing = z.infer<typeof CompetitorListingSchema>;
+
+export const PriceChangeEventSchema = z.object({
+  id: z.string(),
+  competitorId: z.string(),
+  competitorName: z.string(),
+  competitorPhotoUrl: OptionalHttpUrlSchema,
   airbnbUrl: HttpUrlSchema,
   bedrooms: z.number().int().min(0),
-  bathrooms: z.number().min(0),
-  rating: z.number().min(0).max(5),
-  reviewsCount: z.number().int().min(0),
-  currentPrice: z.number().positive(),
-  originalPrice: z.number().positive(),
-  isBooked: z.boolean(),
-  distanceMiles: z.number().min(0),
-  superhost: z.boolean(),
-  isVerified: z.boolean().default(false),
-  verifiedAt: z.string().optional(),
-  priceHistory: z.array(PricePointSchema),
+  propertyType: PropertyTypeSchema,
+  previousPrice: z.number().positive(),
+  newPrice: z.number().positive(),
+  deltaAmount: z.number(),
+  percentChange: z.number(),
+  changedAt: z.string(),
 });
 
-export type ListingComp = z.infer<typeof ListingCompSchema>;
+export type PriceChangeEvent = z.infer<typeof PriceChangeEventSchema>;
 
-export const AirbnbPromotionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  badge: z.string(),
-  discountPercent: z.number().min(1).max(80),
-  effectivePrice: z.number().positive(),
-  startDate: z.string(),
-  endDate: z.string(),
-  reason: z.string(),
-  status: z.enum(['recommended', 'applied', 'dismissed']),
-});
-
-export type AirbnbPromotion = z.infer<typeof AirbnbPromotionSchema>;
-
-export const PropertyHouseSchema = z.object({
-  id: z.string(),
-  nickname: z.string().min(1),
-  title: z.string().min(1),
-  address: z.string().min(1),
-  neighborhood: z.string(),
-  zipCode: z.string(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
-  bedrooms: z.number().int().min(0),
-  bathrooms: z.number().min(0),
-  currentPrice: z.number().positive(),
-  floorPrice: z.number().positive(),
-  cleaningFee: z.number().min(0),
-  cleaningCost: z.number().min(0).default(115),
-  nightlyFixedCost: z.number().min(0).default(120),
-  hostServiceFeePercent: z.number().min(0).max(25).default(3),
-  unbookedDaysCount: z.number().int().min(0),
-  unbookedStartDate: z.string(),
-  unbookedEndDate: z.string(),
-  isBooked: z.boolean(),
-  propertyManagerName: z.string(),
-  managerPhone: z.string(),
-  activePromotion: AirbnbPromotionSchema.nullable().optional(),
-  comps: z.array(ListingCompSchema),
-});
-
-export type PropertyHouse = z.infer<typeof PropertyHouseSchema>;
-
-export const PricingRuleKindSchema = z.enum([
-  'orphan_gap',
-  'neighbor_undercut',
-  'promo_badge',
-  'safety_floor',
-]);
-
-export type PricingRuleKind = z.infer<typeof PricingRuleKindSchema>;
-
-export const PricingRuleSchema = z.object({
-  id: z.string(),
-  kind: PricingRuleKindSchema,
-  title: z.string(),
+export const EmailAlertConfigSchema = z.object({
+  email: z.string(),
   enabled: z.boolean(),
-  description: z.string(),
-  parameterName: z.string(),
-  parameterValue: z.number().min(0),
-  unit: z.string(),
 });
 
-export type PricingRule = z.infer<typeof PricingRuleSchema>;
+export type EmailAlertConfig = z.infer<typeof EmailAlertConfigSchema>;
 
-export interface GroundingSource {
-  title: string;
-  uri: string;
-}
-
-export interface LiveMarketScanResult {
-  summary: string;
-  weekdayRange: string;
-  weekendRange: string;
-  sources: GroundingSource[];
-  scannedAt: string;
-  isLiveGrounded: boolean;
-}
-
-export interface RevenueScenario {
-  label: string;
-  nightlyRate: number;
-  nights: number;
-  bookingProbability: number;
-  grossRoomRevenue: number;
-  cleaningFeeRevenue: number;
-  platformFee: number;
-  cleanerPayout: number;
-  fixedCosts: number;
-  netProfitIfBooked: number;
-  expectedNetValue: number;
-  deltaExpectedVsCurrent: number;
-}
-
-export interface CompetitorSummary {
-  totalComps: number;
-  verifiedCompsCount: number;
-  vacantComps: number;
-  bookedComps: number;
-  avgVacantPrice: number;
-  medianCompPrice: number;
-  lowerRangePrice: number;
-  upperRangePrice: number;
-  cheapestNeighborPrice: number;
-  cheapestNeighborName: string;
-  cheapestNeighborUrl: string;
-  cheapestNeighborVerified: boolean;
-  undercuttingCompsCount: number;
-}
-
-export interface AgentDecision {
-  status: 'ALERT' | 'UPSIDE' | 'OK';
-  direction: 'drop' | 'raise' | 'hold';
-  recommendedPrice: number;
-  effectiveFloorPrice: number;
-  priceDelta: number;
-  percentDelta: number;
-  confidenceScore: number;
-  primaryTriggerRule: string;
-  headline: string;
-  reasoning: string;
-  neighborGapAnalysis: string;
-  recommendedPromotions: AirbnbPromotion[];
-  competitorSummary: CompetitorSummary;
-  revenueProjection: {
-    atRiskGross: number;
-    currentScenario: RevenueScenario;
-    recommendedScenario: RevenueScenario;
-    expectedValueGain: number;
-  };
-  recommendedActions: string[];
-  projectedBookingProbability: {
-    atCurrentPrice: number;
-    atRecommendedPrice: number;
-  };
-  source: 'deterministic' | 'gemini';
-  timestamp: string;
-}
-
-export const NotificationChannelSchema = z.enum([
-  'telegram',
-  'whatsapp',
-  'twilio_sms',
-  'browser',
-]);
-
-export type NotificationChannel = z.infer<typeof NotificationChannelSchema>;
-
-export const NotificationLogSchema = z.object({
-  id: z.string(),
-  timestamp: z.string(),
-  channel: NotificationChannelSchema,
-  recipient: z.string(),
-  propertyNickname: z.string(),
-  message: z.string(),
-  delivered: z.boolean(),
-  status: z.enum(['sent', 'pending', 'failed']),
+export const MonitoringStateSchema = z.object({
+  property: HostPropertySchema.nullable(),
+  competitors: z.array(CompetitorListingSchema),
+  priceChanges: z.array(PriceChangeEventSchema),
+  lastCheckedAt: z.string().nullable(),
+  previousCheckAt: z.string().nullable(),
+  lastCheckChangesCount: z.number().int().min(0),
+  emailConfig: EmailAlertConfigSchema,
 });
 
-export type NotificationLog = z.infer<typeof NotificationLogSchema>;
+export type MonitoringState = z.infer<typeof MonitoringStateSchema>;
 
-export interface ChatSuggestedAction {
-  type: 'set_price' | 'run_promo';
-  value: number;
-  label: string;
+export type MatchTier = 'primary' | 'secondary' | 'excluded';
+
+export interface EvaluatedCompetitor {
+  listing: CompetitorListing;
+  tier: MatchTier;
+  matchScore: number;
+  matchReason: string;
+  priceDiffFromMine: number | null;
+  percentDiffFromMine: number | null;
 }
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  suggestedAction?: ChatSuggestedAction;
+export interface MarketOverviewStats {
+  comparableCount: number;
+  competitorAveragePrice: number | null;
+  myPriceVsAverageDollar: number | null;
+  myPriceVsAveragePercent: number | null;
+  cheapestComparable: CompetitorListing | null;
+  mostExpensiveComparable: CompetitorListing | null;
+  changesSinceLastCheck: number;
+  actionState: 'needs_attention' | 'opportunity' | 'aligned' | 'incomplete';
+  actionSummary: string;
 }
 
-export const AiSettingsSchema = z.object({
-  mode: z.enum(['auto', 'local_only']),
-  customApiKey: z.string().default(''),
-  soundEnabled: z.boolean().default(true),
-});
-
-export type AiSettings = z.infer<typeof AiSettingsSchema>;
-
-export type ActiveWorkspaceTab = 'overview' | 'comps' | 'revenue' | 'rules';
+export type CompetitorSortField = 'price_asc' | 'price_desc' | 'bedrooms_asc' | 'bedrooms_desc';

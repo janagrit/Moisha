@@ -1,654 +1,325 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { BarChart3, Layers, Calculator, Sliders, MapPin } from 'lucide-react';
-import { Navbar } from './components/Navbar';
-import { PropertySelector } from './components/PropertySelector';
-import { AgentAlertBanner } from './components/AgentAlertBanner';
-import { MarketCharts } from './components/MarketCharts';
-import { PocketAdvisorChat } from './components/PocketAdvisorChat';
-import { CompsManager } from './components/CompsManager';
-import { LiveMarketGroundingCard } from './components/LiveMarketGroundingCard';
-import { RevenueCalculator } from './components/RevenueCalculator';
-import { PromotionPlanner } from './components/PromotionPlanner';
-import { RuleEngineCard } from './components/RuleEngineCard';
-import { NotificationCenter } from './components/NotificationCenter';
-import { SettingsModal } from './components/SettingsModal';
-import { QuickStartBanner, HowItWorksModal } from './components/HowItWorksGuide';
+import { useState, useEffect, useMemo } from 'react';
+import { TopBar } from './components/TopBar';
+import { PropertyOnboarding } from './components/PropertyOnboarding';
+import { MyPropertyCard } from './components/MyPropertyCard';
+import { MarketOverviewStrip } from './components/MarketOverviewStrip';
+import { PriceChangesFeed } from './components/PriceChangesFeed';
+import { CompetitorListingsSection } from './components/CompetitorListingsSection';
+import { PropertyEditModal } from './components/PropertyEditModal';
+import { CompetitorFormModal } from './components/CompetitorFormModal';
+import { DailyCheckModal } from './components/DailyCheckModal';
+import { EmailAlertsModal } from './components/EmailAlertsModal';
 
 import {
-  PropertyHouse,
-  ListingComp,
-  PricingRule,
-  AgentDecision,
-  NotificationLog,
-  NotificationChannel,
-  AirbnbPromotion,
-  AiSettings,
-  ActiveWorkspaceTab,
+  MonitoringState,
+  HostProperty,
+  CompetitorListing,
+  PropertyType,
+  Amenity,
+  PriceChangeEvent,
 } from './types';
-import { evaluatePropertyPricing } from './services/pricingEngine';
-import { checkGeminiProxyStatus, runMoishaAnalysis } from './services/aiService';
 import {
-  loadPersistedState,
-  savePersistedState,
-  clearPersistedState,
-} from './services/storageService';
-import { sendBrowserAlertNotification } from './services/notificationService';
-import { playAlertSound } from './services/audioService';
+  partitionCompetitors,
+  computeMarketOverview,
+} from './services/competitorMatcher';
+import {
+  loadMonitoringState,
+  saveMonitoringState,
+  clearMonitoringState,
+  recordPriceCheck,
+} from './services/monitoringService';
+import {
+  checkAiAvailable,
+  fetchConciseMarketSummary,
+} from './services/aiSummaryService';
 
 export default function App() {
-  const initialState = useMemo(() => loadPersistedState(), []);
+  const [state, setState] = useState<MonitoringState>(() => loadMonitoringState());
 
-  const [houses, setHouses] = useState<PropertyHouse[]>(initialState.houses);
-  const [selectedHouseId, setSelectedHouseId] = useState<string>(initialState.selectedHouseId);
-  const [rules, setRules] = useState<PricingRule[]>(initialState.rules);
-  const [logs, setLogs] = useState<NotificationLog[]>(initialState.logs);
-  const [aiSettings, setAiSettings] = useState<AiSettings>(initialState.aiSettings);
+  const [editPropertyOpen, setEditPropertyOpen] = useState(false);
+  const [compModalOpen, setCompModalOpen] = useState(false);
+  const [editingComp, setEditingComp] = useState<CompetitorListing | null>(null);
+  const [checkModalOpen, setCheckModalOpen] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<ActiveWorkspaceTab>('overview');
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [guideModalOpen, setGuideModalOpen] = useState(false);
-  const [quickGuideHidden, setQuickGuideHidden] = useState<boolean>(() => {
-    try {
-      return window.localStorage.getItem('moisha_guide_dismissed_v1') === '1';
-    } catch {
-      return false;
-    }
-  });
-  const [isScanning, setIsScanning] = useState(false);
-  const [lastScannedTime, setLastScannedTime] = useState<string | null>(null);
-  const [proxyAvailable, setProxyAvailable] = useState(false);
-  const [proxyModel, setProxyModel] = useState('gemini-2.5-flash');
-
-  const analysisRequestIdRef = useRef(0);
-
-  const [aiDecisionOverride, setAiDecisionOverride] = useState<{
-    houseId: string;
-    decision: AgentDecision;
-  } | null>(null);
-
-  const invalidateAiOverride = useCallback(() => {
-    analysisRequestIdRef.current += 1;
-    setAiDecisionOverride(null);
-  }, []);
-
-  const selectedHouse = useMemo<PropertyHouse | null>(
-    () => houses.find((h) => h.id === selectedHouseId) ?? houses[0] ?? null,
-    [houses, selectedHouseId],
-  );
-
-  const baseDecision = useMemo<AgentDecision | null>(
-    () =>
-      selectedHouse
-        ? evaluatePropertyPricing(selectedHouse, rules, lastScannedTime || undefined)
-        : null,
-    [selectedHouse, rules, lastScannedTime],
-  );
-
-  const decision = useMemo<AgentDecision | null>(() => {
-    if (!baseDecision || !selectedHouse) return null;
-    if (aiDecisionOverride && aiDecisionOverride.houseId === selectedHouse.id) {
-      return {
-        ...baseDecision,
-        headline: aiDecisionOverride.decision.headline,
-        reasoning: aiDecisionOverride.decision.reasoning,
-        neighborGapAnalysis: aiDecisionOverride.decision.neighborGapAnalysis,
-        recommendedActions: aiDecisionOverride.decision.recommendedActions,
-        source: 'gemini',
-      };
-    }
-    return baseDecision;
-  }, [aiDecisionOverride, baseDecision, selectedHouse]);
+  const [aiAvailable, setAiAvailable] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
 
   useEffect(() => {
-    savePersistedState({
-      houses,
-      selectedHouseId,
-      rules,
-      logs,
-      aiSettings,
-    });
-  }, [houses, selectedHouseId, rules, logs, aiSettings]);
+    saveMonitoringState(state);
+  }, [state]);
 
   useEffect(() => {
-    let active = true;
-    checkGeminiProxyStatus().then((status) => {
-      if (active) {
-        setProxyAvailable(status.proxyAvailable);
-        setProxyModel(status.model);
-      }
+    let mounted = true;
+    checkAiAvailable().then((ok) => {
+      if (mounted) setAiAvailable(ok);
     });
     return () => {
-      active = false;
+      mounted = false;
     };
   }, []);
 
-  const triggerChime = useCallback(() => {
-    if (aiSettings.soundEnabled) {
-      playAlertSound();
+  const partitioned = useMemo(() => {
+    if (!state.property) {
+      return { primary: [], secondary: [], excluded: [] };
     }
-  }, [aiSettings.soundEnabled]);
+    return partitionCompetitors(state.property, state.competitors);
+  }, [state.property, state.competitors]);
 
-  const appendLog = useCallback(
-    (
-      house: PropertyHouse,
-      channel: NotificationChannel,
-      message: string,
-      delivered = true,
-    ) => {
-      const entry: NotificationLog = {
-        id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        channel,
-        recipient: channel === 'browser' ? 'This Device (PWA)' : `${house.propertyManagerName}`,
-        propertyNickname: house.nickname,
-        message,
-        delivered,
-        status: delivered ? 'sent' : 'failed',
+  const overview = useMemo(() => {
+    if (!state.property) return null;
+    return computeMarketOverview(
+      state.property,
+      partitioned.primary,
+      state.priceChanges,
+      state.previousCheckAt,
+      state.lastCheckChangesCount,
+    );
+  }, [
+    state.property,
+    partitioned.primary,
+    state.priceChanges,
+    state.previousCheckAt,
+    state.lastCheckChangesCount,
+  ]);
+
+  const handleRegisterProperty = (property: HostProperty) => {
+    setAiSummary(null);
+    setState((prev) => ({
+      ...prev,
+      property,
+    }));
+  };
+
+  const handleSaveProperty = (updated: HostProperty) => {
+    setAiSummary(null);
+    setState((prev) => ({
+      ...prev,
+      property: updated,
+    }));
+  };
+
+  const handleResetProperty = () => {
+    setEditPropertyOpen(false);
+    setAiSummary(null);
+    setState(clearMonitoringState());
+  };
+
+  const handleSaveCompetitor = (input: {
+    id?: string;
+    airbnbUrl: string;
+    airbnbRoomId: string | null;
+    name: string;
+    propertyType: PropertyType;
+    bedrooms: number;
+    bathrooms: number | null;
+    guestCapacity: number | null;
+    nightlyPrice: number;
+    photoUrl: string | null;
+    amenities: Amenity[];
+  }) => {
+    setAiSummary(null);
+    const nowIso = new Date().toISOString();
+
+    if (input.id) {
+      const existing = state.competitors.find((c) => c.id === input.id);
+      if (!existing) return;
+
+      // Update non-price metadata first, then pass through recordPriceCheck if price changed
+      const updatedMetaState: MonitoringState = {
+        ...state,
+        competitors: state.competitors.map((c) =>
+          c.id === input.id
+            ? {
+                ...c,
+                airbnbUrl: input.airbnbUrl,
+                airbnbRoomId: input.airbnbRoomId,
+                name: input.name,
+                propertyType: input.propertyType,
+                bedrooms: input.bedrooms,
+                bathrooms: input.bathrooms,
+                guestCapacity: input.guestCapacity,
+                photoUrl: input.photoUrl,
+                amenities: input.amenities,
+              }
+            : c,
+        ),
       };
-      setLogs((prev) => [entry, ...prev.slice(0, 49)]);
-    },
-    [],
-  );
 
-  const runAnalysisForHouse = useCallback(
-    async (targetHouse: PropertyHouse, currentRules: PricingRule[]) => {
-      const reqId = ++analysisRequestIdRef.current;
-      setIsScanning(true);
-      try {
-        const analyzed = await runMoishaAnalysis(
-          targetHouse,
-          currentRules,
-          aiSettings,
-          proxyAvailable,
+      if (input.nightlyPrice !== existing.nightlyPrice) {
+        const { nextState } = recordPriceCheck(
+          updatedMetaState,
+          { [existing.id]: input.nightlyPrice },
+          nowIso,
         );
-        if (reqId !== analysisRequestIdRef.current) {
-          return;
-        }
-        const nowStr = new Date().toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        });
-        setLastScannedTime(nowStr);
-
-        if (analyzed.source === 'gemini') {
-          setAiDecisionOverride({ houseId: targetHouse.id, decision: analyzed });
-        } else {
-          setAiDecisionOverride(null);
-        }
-
-        if (analyzed.status === 'ALERT' || analyzed.status === 'UPSIDE') {
-          triggerChime();
-        }
-      } finally {
-        if (reqId === analysisRequestIdRef.current) {
-          setIsScanning(false);
-        }
+        setState(nextState);
+      } else {
+        setState(updatedMetaState);
       }
-    },
-    [aiSettings, proxyAvailable, triggerChime],
-  );
-
-  const handleSelectHouse = (id: string) => {
-    setSelectedHouseId(id);
-  };
-
-  const handleUpdateHouse = (houseId: string, updates: Partial<PropertyHouse>) => {
-    invalidateAiOverride();
-    setHouses((prev) => prev.map((h) => (h.id === houseId ? { ...h, ...updates } : h)));
-  };
-
-  const handleAddHouse = (created: PropertyHouse) => {
-    invalidateAiOverride();
-    setHouses((prev) => [...prev, created]);
-    setSelectedHouseId(created.id);
-    setActiveTab('overview');
-    setLastScannedTime(
-      new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    );
-  };
-
-  const handleDeleteHouse = (houseId: string) => {
-    invalidateAiOverride();
-    setHouses((prev) => {
-      const remaining = prev.filter((h) => h.id !== houseId);
-      if (selectedHouseId === houseId) {
-        setSelectedHouseId(remaining[0]?.id ?? '');
-      }
-      return remaining;
-    });
-  };
-
-  const handleUpdateComp = (compId: string, updates: Partial<ListingComp>) => {
-    if (!selectedHouse) return;
-    invalidateAiOverride();
-    setHouses((prev) =>
-      prev.map((h) =>
-        h.id === selectedHouse.id
-          ? {
-              ...h,
-              comps: h.comps.map((c) => (c.id === compId ? { ...c, ...updates } : c)),
-            }
-          : h,
-      ),
-    );
-  };
-
-  const handleAddComp = (newComp: Omit<ListingComp, 'id'>) => {
-    if (!selectedHouse) return;
-    invalidateAiOverride();
-    const created: ListingComp = {
-      ...newComp,
-      id: `comp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    };
-    setHouses((prev) =>
-      prev.map((h) => {
-        if (h.id !== selectedHouse.id) return h;
-        // When user logs a verified comp, drop unverified regional placeholder estimates so only verified comps remain!
-        const existingToKeep = created.isVerified
-          ? h.comps.filter((c) => c.isVerified)
-          : h.comps;
-        return { ...h, comps: [...existingToKeep, created] };
-      }),
-    );
-  };
-
-  const handleDeleteComp = (compId: string) => {
-    if (!selectedHouse) return;
-    invalidateAiOverride();
-    setHouses((prev) =>
-      prev.map((h) =>
-        h.id === selectedHouse.id
-          ? { ...h, comps: h.comps.filter((c) => c.id !== compId) }
-          : h,
-      ),
-    );
-  };
-
-  const handleSimulateNeighborDrop = () => {
-    if (!selectedHouse || selectedHouse.comps.length === 0) return;
-    const targetCompIndex = selectedHouse.comps.findIndex((c) => !c.isBooked);
-    const idxToDrop = targetCompIndex >= 0 ? targetCompIndex : 0;
-
-    const updatedComps = selectedHouse.comps.map((c, idx) =>
-      idx === idxToDrop
-        ? {
-            ...c,
-            originalPrice: c.currentPrice,
-            currentPrice: Math.max(85, c.currentPrice - 25),
-            isBooked: false,
-          }
-        : c,
-    );
-    const updatedHouse: PropertyHouse = { ...selectedHouse, comps: updatedComps };
-
-    invalidateAiOverride();
-    setHouses((prev) =>
-      prev.map((h) => (h.id === selectedHouse.id ? updatedHouse : h)),
-    );
-    void runAnalysisForHouse(updatedHouse, rules);
-  };
-
-  const handleApplyPriceChange = (newPrice: number) => {
-    if (!selectedHouse || !decision) return;
-    const clamped = Math.max(decision.effectiveFloorPrice, Math.round(newPrice));
-    invalidateAiOverride();
-    setHouses((prev) =>
-      prev.map((h) => (h.id === selectedHouse.id ? { ...h, currentPrice: clamped } : h)),
-    );
-    triggerChime();
-    appendLog(
-      selectedHouse,
-      'telegram',
-      `Rate updated for ${selectedHouse.nickname}: now $${clamped}/night (floor $${decision.effectiveFloorPrice}/nt).`,
-    );
-  };
-
-  const handleApplyPromotion = (promo: AirbnbPromotion | null) => {
-    if (!selectedHouse) return;
-    invalidateAiOverride();
-    setHouses((prev) =>
-      prev.map((h) => (h.id === selectedHouse.id ? { ...h, activePromotion: promo } : h)),
-    );
-    triggerChime();
-    if (promo) {
-      appendLog(
-        selectedHouse,
-        'telegram',
-        `Promo activated on ${selectedHouse.nickname}: "${promo.badge}" at $${promo.effectivePrice}/night.`,
-      );
-    }
-  };
-
-  const handleSendReminderToPM = (promo?: AirbnbPromotion) => {
-    if (!selectedHouse || !decision) return;
-    triggerChime();
-    const actionSummary = promo
-      ? `Activate "${promo.badge}" ($${promo.effectivePrice}/nt)`
-      : `Adjust rate to $${decision.recommendedPrice}/nt`;
-    appendLog(
-      selectedHouse,
-      'whatsapp',
-      `PM Reminder [${selectedHouse.nickname}]: ${selectedHouse.unbookedDaysCount} nights open. Recommended: ${actionSummary}.`,
-    );
-  };
-
-  const handleSendCustomNotification = async (
-    channel: NotificationChannel,
-    text: string,
-  ) => {
-    if (!selectedHouse) return;
-    triggerChime();
-    if (channel === 'browser') {
-      const ok = await sendBrowserAlertNotification(
-        `Moisha · ${selectedHouse.nickname}`,
-        text,
-      );
-      appendLog(selectedHouse, 'browser', text, ok);
       return;
     }
-    appendLog(selectedHouse, channel, text, true);
+
+    const created: CompetitorListing = {
+      id: `comp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      airbnbUrl: input.airbnbUrl,
+      airbnbRoomId: input.airbnbRoomId,
+      name: input.name,
+      propertyType: input.propertyType,
+      bedrooms: input.bedrooms,
+      bathrooms: input.bathrooms,
+      guestCapacity: input.guestCapacity,
+      nightlyPrice: input.nightlyPrice,
+      previousPrice: null,
+      photoUrl: input.photoUrl,
+      locationNote: null,
+      amenities: input.amenities,
+      lastCheckedAt: nowIso,
+      priceHistory: [{ price: input.nightlyPrice, recordedAt: nowIso }],
+    };
+
+    setState((prev) => ({
+      ...prev,
+      competitors: [...prev.competitors, created],
+      lastCheckedAt: prev.lastCheckedAt ?? nowIso,
+    }));
   };
 
-  const updateQuickGuideHidden = (hidden: boolean) => {
-    setQuickGuideHidden(hidden);
+  const handleDeleteCompetitor = (id: string) => {
+    setAiSummary(null);
+    setState((prev) => ({
+      ...prev,
+      competitors: prev.competitors.filter((c) => c.id !== id),
+    }));
+  };
+
+  const handleSubmitPriceCheck = (
+    observedPricesById: Record<string, number>,
+  ): PriceChangeEvent[] => {
+    setAiSummary(null);
+    const { nextState, detectedChanges } = recordPriceCheck(state, observedPricesById);
+    setState(nextState);
+    return detectedChanges;
+  };
+
+  const handleRequestAiSummary = async () => {
+    if (!state.property || !overview) return;
+    setAiLoading(true);
     try {
-      if (hidden) {
-        window.localStorage.setItem('moisha_guide_dismissed_v1', '1');
-      } else {
-        window.localStorage.removeItem('moisha_guide_dismissed_v1');
-      }
-    } catch {
-      // Ignore private browsing storage restrictions
+      const summary = await fetchConciseMarketSummary(
+        state.property,
+        overview,
+        state.priceChanges,
+      );
+      if (summary) setAiSummary(summary);
+    } finally {
+      setAiLoading(false);
     }
   };
 
-  const handleResetDemoData = () => {
-    invalidateAiOverride();
-    const fresh = clearPersistedState();
-    setHouses(fresh.houses);
-    setSelectedHouseId(fresh.selectedHouseId);
-    setRules(fresh.rules);
-    setLogs(fresh.logs);
-    setAiSettings(fresh.aiSettings);
-    updateQuickGuideHidden(false);
-  };
-
-  const aiActive =
-    aiSettings.mode === 'auto' &&
-    (proxyAvailable || Boolean(aiSettings.customApiKey.trim()));
-
-  const tabs: Array<{
-    id: ActiveWorkspaceTab;
-    label: string;
-    badge?: string;
-    icon: React.ReactNode;
-  }> = selectedHouse && decision
-    ? [
-        {
-          id: 'overview',
-          label: 'Verdict & Copilot',
-          badge:
-            decision.status === 'ALERT'
-              ? 'Alert'
-              : decision.status === 'UPSIDE'
-                ? 'Upside'
-                : undefined,
-          icon: <BarChart3 className="h-4 w-4" />,
-        },
-        {
-          id: 'comps',
-          label: 'Comps & Submarket',
-          badge: String(selectedHouse.comps.length),
-          icon: <Layers className="h-4 w-4" />,
-        },
-        {
-          id: 'revenue',
-          label: 'Profit & Promotions',
-          badge:
-            decision.recommendedPromotions.length > 0
-              ? String(decision.recommendedPromotions.length)
-              : undefined,
-          icon: <Calculator className="h-4 w-4" />,
-        },
-        {
-          id: 'rules',
-          label: 'Rules & Alerts',
-          badge: String(rules.filter((r) => r.enabled).length),
-          icon: <Sliders className="h-4 w-4" />,
-        },
-      ]
-    : [];
-
   return (
-    <div className="flex min-h-screen flex-col bg-moisha-sand font-sans text-moisha-navy">
-      <Navbar
-        selectedHouse={selectedHouse}
-        decision={decision}
-        isScanning={isScanning}
-        onTriggerScan={() => {
-          if (selectedHouse) {
-            void runAnalysisForHouse(selectedHouse, rules);
-          }
-        }}
-        lastScannedTime={lastScannedTime}
-        aiActive={aiActive}
-        onOpenGuide={() => setGuideModalOpen(true)}
-        onOpenSettings={() => setSettingsOpen(true)}
+    <div className="flex min-h-screen flex-col bg-[#F8FAFC] text-slate-900">
+      <TopBar
+        property={state.property}
+        lastCheckedAt={state.lastCheckedAt}
+        emailConfig={state.emailConfig}
+        competitorCount={state.competitors.length}
+        onOpenCheckModal={() => setCheckModalOpen(true)}
+        onOpenEmailModal={() => setEmailModalOpen(true)}
       />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        {!quickGuideHidden && (
-          <QuickStartBanner
-            onDismiss={() => updateQuickGuideHidden(true)}
-            onOpenFullGuide={() => setGuideModalOpen(true)}
-            onNavigateTab={(tab) => {
-              if (selectedHouse) {
-                setActiveTab(tab);
-              } else {
-                document.getElementById('rental-address-input')?.focus();
-              }
+      {!state.property || !overview ? (
+        <main className="flex-1">
+          <PropertyOnboarding onRegisterProperty={handleRegisterProperty} />
+        </main>
+      ) : (
+        <main className="mx-auto w-full max-w-6xl flex-1 space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+          <MyPropertyCard
+            property={state.property}
+            overview={overview}
+            aiSummary={aiSummary}
+            aiAvailable={aiAvailable}
+            aiLoading={aiLoading}
+            onRequestAiSummary={() => void handleRequestAiSummary()}
+            onQuickSetPrice={(price) =>
+              handleSaveProperty({ ...state.property!, nightlyPrice: price })
+            }
+            onEditProperty={() => setEditPropertyOpen(true)}
+          />
+
+          <MarketOverviewStrip property={state.property} overview={overview} />
+
+          <PriceChangesFeed
+            changes={state.priceChanges}
+            hasCompetitors={state.competitors.length > 0}
+            lastCheckedAt={state.lastCheckedAt}
+            onOpenCheckModal={() => setCheckModalOpen(true)}
+            onOpenAddCompetitor={() => {
+              setEditingComp(null);
+              setCompModalOpen(true);
             }}
           />
-        )}
 
-        <PropertySelector
-          houses={houses}
-          selectedHouseId={selectedHouse?.id ?? ''}
-          onSelectHouse={handleSelectHouse}
-          onUpdateHouse={handleUpdateHouse}
-          onAddHouse={handleAddHouse}
-          onDeleteHouse={handleDeleteHouse}
-        />
+          <CompetitorListingsSection
+            property={state.property}
+            primary={partitioned.primary}
+            secondary={partitioned.secondary}
+            excluded={partitioned.excluded}
+            onAddCompetitor={() => {
+              setEditingComp(null);
+              setCompModalOpen(true);
+            }}
+            onEditCompetitor={(comp) => {
+              setEditingComp(comp);
+              setCompModalOpen(true);
+            }}
+            onDeleteCompetitor={handleDeleteCompetitor}
+          />
+        </main>
+      )}
 
-        {!selectedHouse || !decision ? (
-          <section
-            aria-label="Empty portfolio state"
-            className="card border-dashed border-moisha-border bg-white/80 p-8 text-center sm:p-12"
-          >
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-moisha-sky text-moisha-royal">
-              <MapPin className="h-7 w-7" />
-            </div>
-            <h2 className="text-xl font-extrabold text-moisha-navy sm:text-2xl">
-              Enter a Property Address Above to Get Started
-            </h2>
-            <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-moisha-muted sm:text-base">
-              Type any street address, city, or ZIP code, enter your current nightly rate and minimum floor price, and click{' '}
-              <strong>Check Address</strong> to see Moisha&apos;s neighborhood rate benchmark, net profit breakdown, and promotion options.
-            </p>
-          </section>
-        ) : (
-          <>
-            <nav
-              aria-label="Workspace sections"
-              className="flex items-center gap-2 overflow-x-auto rounded-2xl border border-moisha-border bg-white p-2 shadow-sm"
-            >
-              {tabs.map((tab) => {
-                const isCurrent = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    aria-current={isCurrent ? 'page' : undefined}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition-all sm:text-base ${
-                      isCurrent
-                        ? 'bg-moisha-navy text-white shadow-sm'
-                        : 'text-moisha-muted hover:bg-moisha-sand hover:text-moisha-navy'
-                    }`}
-                  >
-                    {tab.icon}
-                    <span>{tab.label}</span>
-                    {tab.badge && (
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                          isCurrent
-                            ? 'bg-white/20 text-white'
-                            : tab.badge === 'Alert'
-                              ? 'bg-moisha-butter text-moisha-amber'
-                              : 'bg-moisha-sand text-moisha-navy'
-                        }`}
-                      >
-                        {tab.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-
-            {activeTab === 'overview' && (
-              <div className="space-y-6">
-                <AgentAlertBanner
-                  decision={decision}
-                  house={selectedHouse}
-                  onApplyPriceChange={handleApplyPriceChange}
-                  onApplyPromotion={(promo) => handleApplyPromotion(promo)}
-                  onDispatchReminder={() => handleSendReminderToPM()}
-                  onLogVerifiedComp={handleAddComp}
-                />
-
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                  <MarketCharts house={selectedHouse} decision={decision} />
-                  <PocketAdvisorChat
-                    key={selectedHouse.id}
-                    house={selectedHouse}
-                    decision={decision}
-                    aiSettings={aiSettings}
-                    proxyAvailable={proxyAvailable}
-                    onApplyAction={(type, value) => {
-                      if (type === 'set_price') {
-                        handleApplyPriceChange(value);
-                      } else if (decision.recommendedPromotions[0]) {
-                        handleApplyPromotion({
-                          ...decision.recommendedPromotions[0],
-                          status: 'applied',
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'comps' && (
-              <div className="space-y-6">
-                <CompsManager
-                  house={selectedHouse}
-                  comps={selectedHouse.comps}
-                  myPrice={selectedHouse.currentPrice}
-                  onUpdateComp={handleUpdateComp}
-                  onAddComp={handleAddComp}
-                  onDeleteComp={handleDeleteComp}
-                  onSimulateNeighborUndercut={handleSimulateNeighborDrop}
-                />
-                <LiveMarketGroundingCard
-                  key={selectedHouse.id}
-                  house={selectedHouse}
-                  decision={decision}
-                  aiSettings={aiSettings}
-                  proxyAvailable={proxyAvailable}
-                />
-              </div>
-            )}
-
-            {activeTab === 'revenue' && (
-              <div className="space-y-6">
-                <RevenueCalculator
-                  house={selectedHouse}
-                  decision={decision}
-                  onUpdateHouseCosts={(updates) =>
-                    handleUpdateHouse(selectedHouse.id, updates)
-                  }
-                  onApplyPrice={handleApplyPriceChange}
-                />
-                <PromotionPlanner
-                  house={selectedHouse}
-                  promotions={decision.recommendedPromotions}
-                  effectiveFloorPrice={decision.effectiveFloorPrice}
-                  onApplyPromotion={handleApplyPromotion}
-                  onSendReminderToPM={(promo) => handleSendReminderToPM(promo)}
-                />
-              </div>
-            )}
-
-            {activeTab === 'rules' && (
-              <div className="space-y-6">
-                <RuleEngineCard
-                  house={selectedHouse}
-                  rules={rules}
-                  onToggleRule={(id) => {
-                    invalidateAiOverride();
-                    setRules((prev) =>
-                      prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)),
-                    );
-                  }}
-                  onUpdateParam={(id, val) => {
-                    invalidateAiOverride();
-                    setRules((prev) =>
-                      prev.map((r) => (r.id === id ? { ...r, parameterValue: val } : r)),
-                    );
-                  }}
-                  onUpdateHouse={(updates) => handleUpdateHouse(selectedHouse.id, updates)}
-                />
-                <NotificationCenter
-                  logs={logs}
-                  decision={decision}
-                  house={selectedHouse}
-                  onSendCustomNotification={(ch, text) =>
-                    void handleSendCustomNotification(ch, text)
-                  }
-                />
-              </div>
-            )}
-          </>
-        )}
-      </main>
-
-      {guideModalOpen && (
-        <HowItWorksModal
-          isOpen={guideModalOpen}
-          onClose={() => setGuideModalOpen(false)}
-          onRestoreQuickBanner={() => updateQuickGuideHidden(false)}
+      {editPropertyOpen && state.property && (
+        <PropertyEditModal
+          property={state.property}
+          onClose={() => setEditPropertyOpen(false)}
+          onSave={handleSaveProperty}
+          onResetProperty={handleResetProperty}
         />
       )}
 
-      {settingsOpen && (
-        <SettingsModal
-          isOpen={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          aiSettings={aiSettings}
-          proxyAvailable={proxyAvailable}
-          proxyModel={proxyModel}
-          onUpdateSettings={(updates) =>
-            setAiSettings((prev) => ({ ...prev, ...updates }))
+      {compModalOpen && state.property && (
+        <CompetitorFormModal
+          hostProperty={state.property}
+          editingCompetitor={editingComp}
+          onClose={() => {
+            setCompModalOpen(false);
+            setEditingComp(null);
+          }}
+          onSaveCompetitor={handleSaveCompetitor}
+        />
+      )}
+
+      {checkModalOpen && state.property && (
+        <DailyCheckModal
+          property={state.property}
+          competitors={state.competitors}
+          emailConfig={state.emailConfig}
+          onClose={() => setCheckModalOpen(false)}
+          onSubmitCheck={handleSubmitPriceCheck}
+        />
+      )}
+
+      {emailModalOpen && state.property && (
+        <EmailAlertsModal
+          property={state.property}
+          emailConfig={state.emailConfig}
+          recentChanges={state.priceChanges}
+          onClose={() => setEmailModalOpen(false)}
+          onSaveConfig={(emailConfig) =>
+            setState((prev) => ({ ...prev, emailConfig }))
           }
-          onResetDemoData={handleResetDemoData}
         />
       )}
-
-      <footer className="mt-10 border-t border-moisha-border bg-white py-6 text-center text-sm text-moisha-muted">
-        Moisha Pocket Advisor · Neighborhood Rental Pricing, Floor Guardrails &amp; Profit Calculator
-      </footer>
     </div>
   );
 }

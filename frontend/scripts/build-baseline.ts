@@ -1,13 +1,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parse } from 'csv-parse/sync';
-import { computeQuantile } from '../services/pricingEngine';
 
 interface RawCsvRow {
   price?: string;
-  bedrooms?: string;
-  neighbourhood_cleansed?: string;
-  neighborhood?: string;
+}
+
+function computeQuantile(sortedPrices: number[], q: number): number {
+  if (sortedPrices.length === 0) return 0;
+  if (sortedPrices.length === 1) return sortedPrices[0];
+  const clampedQ = Math.min(1, Math.max(0, Number.isFinite(q) ? q : 0.5));
+  const pos = (sortedPrices.length - 1) * clampedQ;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  const next = sortedPrices[base + 1] ?? sortedPrices[base];
+  return Math.round(sortedPrices[base] + rest * (next - sortedPrices[base]));
 }
 
 function parsePrice(raw: string | undefined): number | null {
@@ -24,7 +31,7 @@ function main(): void {
       JSON.stringify(
         {
           usage: 'npm run build-baseline -- <path-to-listings.csv>',
-          note: 'Pass an Airbnb / rental CSV with a "price" column to compute p25, median, and p75 nightly rates.',
+          note: 'Pass an Airbnb CSV with a "price" column to compute p25, median, and p75 nightly rates.',
         },
         null,
         2,
