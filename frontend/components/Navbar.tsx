@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Sparkles, Settings } from 'lucide-react';
+import { Play, Sparkles, Settings, CircleHelp } from 'lucide-react';
 import { AgentDecision, PropertyHouse } from '../types';
 
 interface NavbarProps {
@@ -9,6 +9,7 @@ interface NavbarProps {
   onTriggerScan: () => void;
   lastScannedTime: string | null;
   aiActive: boolean;
+  onOpenGuide: () => void;
   onOpenSettings: () => void;
 }
 
@@ -19,6 +20,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onTriggerScan,
   lastScannedTime,
   aiActive,
+  onOpenGuide,
   onOpenSettings,
 }) => {
   const statusDotClass = isScanning
@@ -39,7 +41,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 border-b border-moisha-border bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-18 max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-18 max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8">
         {/* Brand */}
         <div className="flex min-w-0 items-center gap-3">
           <img
@@ -65,7 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Center Status Pill */}
-        <div className="hidden items-center gap-3 rounded-2xl border border-moisha-border bg-moisha-sand px-3.5 py-2 text-xs lg:flex">
+        <div className="hidden items-center gap-3 rounded-2xl border border-moisha-border bg-moisha-sand px-3.5 py-2 text-xs xl:flex">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
               <span
@@ -80,20 +82,29 @@ export const Navbar: React.FC<NavbarProps> = ({
             className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
               aiActive
                 ? 'bg-moisha-sky text-moisha-royal'
-                : 'bg-white text-moisha-muted border border-moisha-border'
+                : 'border border-moisha-border bg-white text-moisha-muted'
             }`}
           >
-            {aiActive ? 'Gemini AI + Guardrails' : 'Local Math Engine'}
+            {aiActive ? 'Gemini AI + Guardrails' : 'Instant Pricing Engine'}
           </span>
         </div>
 
         {/* Right Controls */}
         <div className="flex items-center gap-2">
           {lastScannedTime && (
-            <span className="hidden rounded-lg border border-moisha-border bg-moisha-sand px-2.5 py-1.5 text-xs font-medium text-moisha-muted xl:inline-block">
+            <span className="hidden rounded-lg border border-moisha-border bg-moisha-sand px-2.5 py-1.5 text-xs font-medium text-moisha-muted 2xl:inline-block">
               Updated {lastScannedTime}
             </span>
           )}
+
+          <button
+            type="button"
+            onClick={onOpenGuide}
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-moisha-border bg-moisha-sand px-3 text-xs font-bold text-moisha-navy transition-colors hover:bg-white"
+          >
+            <CircleHelp className="h-4 w-4 text-moisha-royal" />
+            <span className="hidden sm:inline">How to Use</span>
+          </button>
 
           <button
             type="button"

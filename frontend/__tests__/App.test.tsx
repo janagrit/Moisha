@@ -49,4 +49,22 @@ describe('Moisha App interactive prototype', () => {
     expect(screen.getByText(/Moisha's Autonomous Pricing Rules/i)).toBeTruthy();
     expect(screen.getByText(/Price Alert Dispatch & Browser Notifications/i)).toBeTruthy();
   });
+
+  it('shows first-time 4-step guide banner, allows dismissing it, and opens full How to Use dialog', () => {
+    render(<App />);
+
+    expect(
+      screen.getByText(/First time here\? How to use Moisha in 4 easy steps/i),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /Dismiss quick start guide/i }));
+    expect(
+      screen.queryByText(/First time here\? How to use Moisha in 4 easy steps/i),
+    ).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /How to Use/i }));
+    expect(
+      screen.getByRole('dialog', { name: /How to Use Moisha — Step-by-Step Guide/i }),
+    ).toBeTruthy();
+  });
 });

@@ -12,6 +12,7 @@ import { PromotionPlanner } from './components/PromotionPlanner';
 import { RuleEngineCard } from './components/RuleEngineCard';
 import { NotificationCenter } from './components/NotificationCenter';
 import { SettingsModal } from './components/SettingsModal';
+import { QuickStartBanner, HowItWorksModal } from './components/HowItWorksGuide';
 
 import {
   PropertyHouse,
@@ -45,6 +46,14 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<ActiveWorkspaceTab>('overview');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [guideModalOpen, setGuideModalOpen] = useState(false);
+  const [quickGuideHidden, setQuickGuideHidden] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('moisha_guide_dismissed_v1') === '1';
+    } catch {
+      return false;
+    }
+  });
   const [isScanning, setIsScanning] = useState(false);
   const [lastScannedTime, setLastScannedTime] = useState<string | null>('08:00 AM');
   const [proxyAvailable, setProxyAvailable] = useState(false);
@@ -318,6 +327,19 @@ export default function App() {
     appendLog(channel, text, true);
   };
 
+  const updateQuickGuideHidden = (hidden: boolean) => {
+    setQuickGuideHidden(hidden);
+    try {
+      if (hidden) {
+        window.localStorage.setItem('moisha_guide_dismissed_v1', '1');
+      } else {
+        window.localStorage.removeItem('moisha_guide_dismissed_v1');
+      }
+    } catch {
+      // Ignore private browsing storage restrictions
+    }
+  };
+
   const handleResetDemoData = () => {
     invalidateAiOverride();
     const fresh = clearPersistedState();
@@ -326,6 +348,7 @@ export default function App() {
     setRules(fresh.rules);
     setLogs(fresh.logs);
     setAiSettings(fresh.aiSettings);
+    updateQuickGuideHidden(false);
   };
 
   const aiActive =
@@ -381,10 +404,19 @@ export default function App() {
         onTriggerScan={() => void runAnalysisForHouse(selectedHouse, rules)}
         lastScannedTime={lastScannedTime}
         aiActive={aiActive}
+        onOpenGuide={() => setGuideModalOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        {!quickGuideHidden && (
+          <QuickStartBanner
+            onDismiss={() => updateQuickGuideHidden(true)}
+            onOpenFullGuide={() => setGuideModalOpen(true)}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+          />
+        )}
+
         <PropertySelector
           houses={houses}
           selectedHouseId={selectedHouse.id}
@@ -534,6 +566,14 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {guideModalOpen && (
+        <HowItWorksModal
+          isOpen={guideModalOpen}
+          onClose={() => setGuideModalOpen(false)}
+          onRestoreQuickBanner={() => updateQuickGuideHidden(false)}
+        />
+      )}
 
       {settingsOpen && (
         <SettingsModal

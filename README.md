@@ -4,22 +4,49 @@
   <img src="screenshots/moisha-dashboard.png" alt="Moisha neighborhood pricing advisor" width="100%" />
 </p>
 
-Moisha helps short-term rental hosts decide what to charge tonight based on real neighborhood comps, calendar gaps, and strict floor-price guardrails.
+**Live Web App:** **[https://janagrit.github.io/Moisha/](https://janagrit.github.io/Moisha/)**
 
-It combines an instant, deterministic pricing & net-profit engine with optional Google Gemini AI advisory, interactive Q&A copilot chat, and live Google Search submarket grounding.
+Moisha helps short-term rental hosts and property managers decide what to charge tonight based on nearby neighbor rates, upcoming empty calendar dates, and strict floor-price guardrails—with zero login or setup required.
+
+---
+
+## First-Time User Guide (4 Easy Steps)
+
+*(These instructions are also built directly into the web app via the top **How to Use** button and first-visit banner.)*
+
+1. **Pick or Add Your Property:** Open the app and click one of the sample houses to explore, or click **`+ Add Property`** (or **`Edit`**) to enter your own street address, current nightly rate, minimum **Safety Floor** price, and unbooked check-in/check-out dates.
+2. **Enter Nearby Neighbor Prices:** Go to the **`Comps & Submarket`** tab and click **`+ Add Neighbor`** to enter 2–4 similar Airbnb listings nearby (their nightly price and whether they are *Vacant* or *Booked*).
+3. **Review Moisha's Verdict & Real Profit:** Check **`Verdict & Copilot`** to see whether to **drop**, **raise**, or **hold** your rate—then open **`Profit & Promotions`** to test any nightly price on the slider and verify exact net profit after cleaning & platform fees.
+4. **Ask Moisha or Share the Plan:** Type any question in the **Ask Uncle Moisha** chat box, or click **`Copy Plan`** / **`Share via WhatsApp`** (under *Rules & Alerts*) to send the recommendation straight to your host or property manager.
+
+> **Privacy Note:** Everything entered in Moisha is saved privately in each user's own browser (`localStorage`). Sharing the link with your property manager lets them manage their own portfolio without overwriting yours.
+
+---
 
 ## Core Capabilities
 
 | Capability | What It Does |
 |---|---|
-| **Multi-Property Portfolio** | Switch between properties (undercut alerts, orphan calendar gaps, and underpriced upside scenarios), or add/edit your own rentals with `localStorage` persistence. |
+| **Built-In Onboarding** | Automatic 4-step quick-start banner for first-time visitors plus an anytime **`How to Use`** walkthrough modal. |
+| **Multi-Property Portfolio** | Switch between properties or add/edit your own rentals with automatic browser persistence. |
 | **Neighborhood Benchmark** | Compare your current rate against local 25th/50th/75th percentile ranges and individual vacant vs. booked neighbor comps. |
-| **Reactive Pricing & Rules Engine** | Enforces your host safety floor, neighbor undercut threshold, orphan-night watch, and Airbnb strikethrough promotion badges in real time. |
 | **Revenue & Net Profit Calculator** | Models gross room revenue, guest cleaning fees, cleaner turnover costs, platform fees, fixed holding costs, and odds-weighted expected net profit. |
-| **Uncle Moisha Copilot & Search Grounding** | Interactive Q&A advisor with 1-click rate/promo actions plus optional Gemini 2.5 Flash + Google Search market grounding. |
-| **Alerts & PWA Notifications** | Dispatch reminders across Telegram, WhatsApp, SMS previews, or trigger live browser push notifications via the built-in Service Worker. |
+| **One-Tap Team Sharing** | Copy ready-made pricing plans to your clipboard or share directly via WhatsApp / browser push notifications. |
+| **Optional Gemini AI** | Works 100% standalone in any browser; optionally connect a Gemini API key (locally via `.env` or in `⚙️ Settings`) for live AI commentary & Google Search market grounding. |
 
-## Quick Start
+---
+
+## Publishing on GitHub Pages (One-Time Repo Setting)
+
+This repository includes an automated GitHub Pages deployment workflow in [`.github/workflows/pages.yml`](.github/workflows/pages.yml). To ensure the live link is active:
+
+1. Open your repository on GitHub → **Settings** → **Pages** (`https://github.com/janagrit/Moisha/settings/pages`).
+2. Under **Build and deployment → Source**, select **`GitHub Actions`**.
+3. Every push to `master` automatically runs typechecks, tests, builds `frontend/dist`, and publishes to **`https://janagrit.github.io/Moisha/`**.
+
+---
+
+## Run Locally (For Developers)
 
 **Requirements:** Node.js 20+ and npm.
 
@@ -28,47 +55,18 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite (typically `http://localhost:5173`).
-
-### Optional: Enable Live Gemini AI & Search Grounding
-
-Moisha works **100% offline out of the box** using its deterministic pricing and profit engine.
-
-To enable live Gemini AI commentary, conversational responses, and Google Search submarket grounding during local development, add `GEMINI_API_KEY` to `.env` in the repository root:
+Optional local Gemini key (`.env` in repo root, never bundled into client builds):
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-Vite's local dev server proxies `/api/gemini/*` requests server-side so your `.env` key is never bundled into client assets. On static deployments (such as GitHub Pages), you can optionally enter a personal key in the in-app **Settings** modal.
-
-## Project Scripts
+### Scripts
 
 ```bash
-npm run dev             # Start Vite dev server (+ optional .env Gemini bridge)
+npm run dev             # Start Vite dev server
 npm run typecheck       # Run strict TypeScript compiler checks
 npm test                # Run Vitest unit, property-based (fast-check), and UI tests
 npm run build           # Build static PWA bundle into frontend/dist
 npm run build-baseline  # Compute p25/median/p75 baselines from demo or CSV data
 ```
-
-## Project Structure
-
-```text
-Moisha/
-├── .github/workflows/pages.yml    # CI typecheck, test, build & GitHub Pages deploy
-├── frontend/
-│   ├── __tests__/                 # Vitest + fast-check + Testing Library suites
-│   ├── components/                # Portfolio, Verdict, Benchmark, Chat, Profit, Rules
-│   ├── public/                    # Logo, PWA manifest, notification Service Worker
-│   ├── scripts/build-baseline.ts  # CSV / portfolio quantile baseline CLI
-│   ├── services/                  # Pricing engine, Gemini bridge, storage, audio/push
-│   ├── App.tsx                    # Main 4-tab pocket advisor workspace
-│   ├── constants.ts               # Sample portfolio & default pricing rules
-│   └── types.ts                   # Zod schemas & TypeScript domain contracts
-└── README.md
-```
-
-## Note
-
-Market estimates, booking probabilities, and pricing recommendations depend on available comparable data and are not guaranteed booking or revenue forecasts. Always review recommendations before updating live listing rates.

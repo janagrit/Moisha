@@ -1,5 +1,5 @@
-import React from 'react';
-import { TrendingDown, TrendingUp, ShieldCheck, MapPin, Tag, Bell } from 'lucide-react';
+import React, { useState } from 'react';
+import { TrendingDown, TrendingUp, ShieldCheck, MapPin, Tag, Bell, Copy, Check } from 'lucide-react';
 import { AgentDecision, PropertyHouse, AirbnbPromotion } from '../types';
 
 interface AgentAlertBannerProps {
@@ -20,6 +20,18 @@ export const AgentAlertBanner: React.FC<AgentAlertBannerProps> = ({
   const isAlert = decision.status === 'ALERT';
   const isUpside = decision.status === 'UPSIDE';
   const topPromo = decision.recommendedPromotions[0];
+  const [copied, setCopied] = useState(false);
+
+  const handleCopySummary = async () => {
+    const summaryText = `Moisha Pricing Plan — ${house.nickname} (${house.address})\n• Window: ${house.unbookedDaysCount} nights (${house.unbookedStartDate} to ${house.unbookedEndDate})\n• Current Rate: $${house.currentPrice}/nt → Recommended: $${decision.recommendedPrice}/nt (Floor: $${decision.effectiveFloorPrice}/nt)\n• Why: ${decision.headline}`;
+    try {
+      await navigator.clipboard.writeText(summaryText);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API unavailable in non-secure contexts
+    }
+  };
 
   const containerStyle = isAlert
     ? 'border-amber-300 bg-gradient-to-br from-[#FFFDF9] via-[#FAF6ED] to-[#F5ECE0]'
@@ -217,6 +229,24 @@ export const AgentAlertBanner: React.FC<AgentAlertBannerProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => void handleCopySummary()}
+            className="btn-quiet py-2 text-xs"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-moisha-green" />
+                <span>Copied Plan!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5 text-moisha-royal" />
+                <span>Copy Plan</span>
+              </>
+            )}
+          </button>
+
           <button
             type="button"
             onClick={onDispatchReminder}

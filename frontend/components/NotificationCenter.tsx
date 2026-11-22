@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, Smartphone, Bell, CheckCircle2 } from 'lucide-react';
+import { Send, Smartphone, Bell, CheckCircle2, Copy, Check, Share2 } from 'lucide-react';
 import {
   NotificationLog,
   NotificationChannel,
@@ -22,6 +22,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 }) => {
   const [activeChannel, setActiveChannel] = useState<NotificationChannel>('telegram');
   const [customMsg, setCustomMsg] = useState('');
+  const [copiedMsg, setCopiedMsg] = useState(false);
 
   const deltaLabel =
     decision.priceDelta > 0
@@ -36,8 +37,21 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 • Floor Guardrail: $${decision.effectiveFloorPrice}/nt
 • Note: ${decision.headline}`;
 
+  const effectiveMessage = customMsg.trim() || defaultFormattedAlert;
+  const whatsappHref = `https://wa.me/?text=${encodeURIComponent(effectiveMessage)}`;
+
+  const handleCopyMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(effectiveMessage);
+      setCopiedMsg(true);
+      window.setTimeout(() => setCopiedMsg(false), 2000);
+    } catch {
+      // Ignore clipboard failures
+    }
+  };
+
   const handleSend = () => {
-    onSendCustomNotification(activeChannel, customMsg.trim() || defaultFormattedAlert);
+    onSendCustomNotification(activeChannel, effectiveMessage);
     setCustomMsg('');
   };
 
@@ -127,6 +141,36 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               <Send className="h-3.5 w-3.5" />
               <span>Dispatch</span>
             </button>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleCopyMessage()}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-moisha-border bg-white px-3 py-1.5 text-xs font-bold text-moisha-navy hover:bg-moisha-sand"
+            >
+              {copiedMsg ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-moisha-green" />
+                  <span>Copied to Clipboard!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 text-moisha-royal" />
+                  <span>Copy Message</span>
+                </>
+              )}
+            </button>
+
+            <a
+              href={whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-moisha-mint px-3 py-1.5 text-xs font-bold text-moisha-green hover:bg-emerald-100"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              <span>Share via WhatsApp</span>
+            </a>
           </div>
         </div>
 
